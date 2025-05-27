@@ -227,16 +227,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 </button>
                 {showReactions && (
                   <div className={`
-                    absolute bottom-full ${isOwnMessage ? '-right-2' : '-left-2'} mb-1
+                    absolute bottom-full ${isOwnMessage ? 'right-0' : 'left-0'} mb-1
                     bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg py-1.5 px-2 flex gap-1.5 z-10
-                    border border-gray-700/50
+                    border border-gray-700/50 max-w-[calc(100vw-2rem)] overflow-x-auto
+                    scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent
                   `}>
                     {REACTIONS.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => handleReaction(emoji)}
                         className={`
-                          text-base hover:scale-125 transition-transform duration-200
+                          text-base hover:scale-125 transition-transform duration-200 shrink-0
                           ${message.reaction === emoji ? 'opacity-50' : 'opacity-100'}
                         `}
                       >
