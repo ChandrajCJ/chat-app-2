@@ -14,7 +14,7 @@ interface MessageItemProps {
   scrollToMessage?: (messageId: string) => void;
 }
 
-const REACTIONS: ReactionType[] = ['🖤', '👀', '😭', '🌚', '🤣', '👍'];
+const REACTIONS: ReactionType[] = ['🖤', '👀', '😭', '🌚', '🤣', '👍', '🙃'];
 
 const MessageItem: React.FC<MessageItemProps> = ({ 
   message, 

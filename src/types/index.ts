@@ -1,6 +1,6 @@
 export type User = '🐞' | '🦎';
 
-export type ReactionType = '🖤' | '👀' | '😭' | '🌚' | '🤣' | '👍';
+export type ReactionType = '🖤' | '👀' | '😭' | '🌚' | '🤣' | '👍' | '🙃';
 
 export interface Message {
   id: string;
