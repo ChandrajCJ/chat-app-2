@@ -1,44 +1,66 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 import { useUser } from '../contexts/UserContext';
-import { UserRound } from 'lucide-react';
 
 const UserSelection: React.FC = () => {
   const { setUser } = useUser();
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState(false);
 
-  const handleSelectUser = (user: User) => {
-    setUser(user);
+  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setPin(value);
+    setError(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (pin === '1204') {
+      setUser('🐞');
+    } else if (pin === '6969') {
+      setUser('🦎');
+    } else {
+      setError(true);
+      setPin('');
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
-      <h1 className="text-2xl md:text-3xl font-bold mb-8 text-center">
-        
-      </h1>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full max-w-md">
-        <button
-          onClick={() => handleSelectUser('🐞')}
-          className="flex flex-col items-center bg-gray-800 hover:bg-gray-700 p-4 sm:p-6 rounded-xl transition-all duration-300 transform hover:scale-105"
-        >
-          <div className="bg-purple-700 p-4 rounded-full mb-4">
-            <UserRound size={28} className="text-white" />
-          </div>
-          <span className="text-2xl">🐞</span>
-        </button>
-        
-        <button
-          onClick={() => handleSelectUser('🦎')}
-          className="flex flex-col items-center bg-gray-800 hover:bg-gray-700 p-4 sm:p-6 rounded-xl transition-all duration-300 transform hover:scale-105"
-        >
-          <div className="bg-indigo-600 p-4 rounded-full mb-4">
-            <UserRound size={28} className="text-white" />
-          </div>
-          <span className="text-2xl">🦎</span>
-        </button>
-      </div>
+      <form 
+        onSubmit={handleSubmit}
+        className="w-full max-w-xs"
+      >
+        <div className="relative">
+          <input
+            type="password"
+            inputMode="numeric"
+            pattern="\d*"
+            maxLength={4}
+            value={pin}
+            onChange={handlePinChange}
+            className={`
+              w-full bg-gray-800 text-center text-2xl tracking-[1em] py-4 rounded-xl
+              border-2 transition-all duration-300
+              ${error 
+                ? 'border-red-500 animate-shake' 
+                : 'border-gray-700 hover:border-gray-600 focus:border-violet-600'
+              }
+              focus:outline-none
+            `}
+            placeholder="••••"
+            autoFocus
+          />
+          {error && (
+            <p className="absolute text-red-500 text-sm mt-2 text-center w-full">
+              Invalid PIN
+            </p>
+          )}
+        </div>
+      </form>
     </div>
   );
 };
 
-export default UserSelection
+export default UserSelection;
