@@ -7,31 +7,29 @@ const UserSelection: React.FC = () => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
+  const validatePin = (value: string) => {
+    if (value.length === 4) {
+      if (value === '1204') {
+        setUser('🐞');
+      } else if (value === '6969') {
+        setUser('🦎');
+      } else {
+        setError(true);
+        setPin('');
+      }
+    }
+  };
+
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 4);
     setPin(value);
     setError(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (pin === '1204') {
-      setUser('🐞');
-    } else if (pin === '6969') {
-      setUser('🦎');
-    } else {
-      setError(true);
-      setPin('');
-    }
+    validatePin(value);
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
-      <form 
-        onSubmit={handleSubmit}
-        className="w-full max-w-xs"
-      >
+      <div className="w-full max-w-xs">
         <div className="relative">
           <input
             type="password"
@@ -58,7 +56,7 @@ const UserSelection: React.FC = () => {
             </p>
           )}
         </div>
-      </form>
+      </div>
     </div>
   );
 };
