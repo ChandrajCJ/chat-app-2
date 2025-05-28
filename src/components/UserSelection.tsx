@@ -1,59 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User } from '../types';
 import { useUser } from '../contexts/UserContext';
+import { Lock } from 'lucide-react';
 
 const UserSelection: React.FC = () => {
   const { setUser } = useUser();
-  const [pin, setPin] = useState('');
+  const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState(false);
+  const inputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
 
-  const validatePin = (value: string) => {
-    if (value.length === 4) {
-      if (value === '1204') {
+  const validatePin = (newPin: string[]) => {
+    const pinString = newPin.join('');
+    if (pinString.length === 4) {
+      if (pinString === '1204') {
         setUser('🐞');
-      } else if (value === '6969') {
+      } else if (pinString === '6969') {
         setUser('🦎');
       } else {
         setError(true);
-        setPin('');
+        setPin(['', '', '', '']);
+        inputRefs[0].current?.focus();
       }
     }
   };
 
-  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-    setPin(value);
-    setError(false);
-    validatePin(value);
+  const handleInput = (index: number, value: string) => {
+    if (error) setError(false);
+    
+    if (/^\d*$/.test(value)) {
+      const newPin = [...pin];
+      newPin[index] = value.slice(-1);
+      setPin(newPin);
+
+      if (value && index < 3) {
+        inputRefs[index + 1].current?.focus();
+      }
+
+      validatePin(newPin);
+    }
   };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !pin[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    }
+  };
+
+  useEffect(() => {
+    inputRefs[0].current?.focus();
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
-      <div className="w-full max-w-xs">
+      <div className="w-full max-w-xs flex flex-col items-center gap-8">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-violet-600/10 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-violet-500" />
+          </div>
+          <h2 className="text-xl font-medium text-gray-200">Enter PIN</h2>
+        </div>
+
         <div className="relative">
-          <input
-            type="password"
-            inputMode="numeric"
-            pattern="\d*"
-            maxLength={4}
-            value={pin}
-            onChange={handlePinChange}
-            className={`
-              w-full bg-gray-800 text-center text-2xl tracking-[1em] py-4 rounded-xl
-              border-2 transition-all duration-300
-              ${error 
-                ? 'border-red-500 animate-shake' 
-                : 'border-gray-700 hover:border-gray-600 focus:border-violet-600'
-              }
-              focus:outline-none
-            `}
-            placeholder="••••"
-            autoFocus
-          />
+          <div className="flex gap-3 sm:gap-4">
+            {pin.map((digit, index) => (
+              <div
+                key={index}
+                className="relative group"
+              >
+                <input
+                  ref={inputRefs[index]}
+                  type="password"
+                  inputMode="numeric"
+                  value={digit}
+                  onChange={(e) => handleInput(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  className={`
+                    w-14 h-14 sm:w-16 sm:h-16 text-2xl text-center
+                    bg-gray-800/50 backdrop-blur-sm
+                    rounded-2xl
+                    transition-all duration-300
+                    ${error 
+                      ? 'border-2 border-red-500/50 animate-shake' 
+                      : 'border-2 border-gray-700/50 group-hover:border-gray-600/50 focus:border-violet-500/50'
+                    }
+                    focus:outline-none focus:ring-2 focus:ring-violet-500/20
+                  `}
+                />
+                <div className={`
+                  absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full
+                  transition-all duration-300
+                  ${digit ? 'bg-violet-500' : 'bg-gray-700'}
+                `} />
+              </div>
+            ))}
+          </div>
+          
           {error && (
-            <p className="absolute text-red-500 text-sm mt-2 text-center w-full">
-              Invalid PIN
-            </p>
+            <div className="absolute -bottom-8 left-0 right-0 text-center">
+              <p className="text-red-500 text-sm animate-fade-in">
+                Invalid PIN
+              </p>
+            </div>
           )}
         </div>
       </div>
