@@ -21,6 +21,7 @@ export interface Message {
 export interface UserStatus {
   lastSeen: Date;
   isOnline: boolean;
+  isTyping?: boolean;
 }
 
 export type UserStatuses = Record<User, UserStatus>;

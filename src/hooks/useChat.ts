@@ -7,8 +7,8 @@ export const useChat = (currentUser: User) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [userStatuses, setUserStatuses] = useState<UserStatuses>({
-    '🐞': { lastSeen: new Date(), isOnline: false },
-    '🦎': { lastSeen: new Date(), isOnline: false }
+    '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
+    '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
 
   // Handle user status
@@ -18,7 +18,8 @@ export const useChat = (currentUser: User) => {
     const updateStatus = async () => {
       await setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
-        isOnline: true
+        isOnline: true,
+        isTyping: false
       });
     };
 
@@ -28,7 +29,8 @@ export const useChat = (currentUser: User) => {
       if (document.hidden) {
         setDoc(userStatusRef, {
           lastSeen: serverTimestamp(),
-          isOnline: false
+          isOnline: false,
+          isTyping: false
         });
       } else {
         updateStatus();
@@ -38,7 +40,8 @@ export const useChat = (currentUser: User) => {
     const handleBeforeUnload = () => {
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
-        isOnline: false
+        isOnline: false,
+        isTyping: false
       });
     };
 
@@ -54,7 +57,8 @@ export const useChat = (currentUser: User) => {
         const data = doc.data();
         newStatuses[user] = {
           lastSeen: data.lastSeen?.toDate() || new Date(),
-          isOnline: data.isOnline || false
+          isOnline: data.isOnline || false,
+          isTyping: data.isTyping || false
         };
       });
       
@@ -67,10 +71,17 @@ export const useChat = (currentUser: User) => {
       unsubscribeStatus();
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
-        isOnline: false
+        isOnline: false,
+        isTyping: false
       });
     };
   }, [currentUser]);
+
+  // Handle typing indicator
+  const setTypingStatus = async (isTyping: boolean) => {
+    const userStatusRef = doc(db, 'status', currentUser);
+    await updateDoc(userStatusRef, { isTyping });
+  };
 
   // Listen to messages in real-time
   useEffect(() => {
@@ -113,6 +124,7 @@ export const useChat = (currentUser: User) => {
 
   const sendMessage = async (text: string, replyTo?: Message) => {
     try {
+      await setTypingStatus(false);
       const messageData: any = {
         text,
         sender: currentUser,
@@ -197,6 +209,7 @@ export const useChat = (currentUser: User) => {
     deleteMessage,
     deleteAllMessages,
     reactToMessage,
-    removeReaction
+    removeReaction,
+    setTypingStatus
   };
 };

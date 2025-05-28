@@ -20,9 +20,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
     deleteAllMessages,
     sendVoiceMessage,
     reactToMessage,
-    removeReaction
+    removeReaction,
+    setTypingStatus
   } = useChat(currentUser);
   const [replyingTo, setReplyingTo] = useState<Message | undefined>();
+
+  const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
+  const isOtherUserTyping = userStatuses[otherUser]?.isTyping || false;
 
   const handleSendMessage = (text: string, replyTo?: Message) => {
     sendMessage(text, replyTo);
@@ -45,6 +49,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         messages={messages} 
         currentUser={currentUser}
         loading={loading}
+        isOtherUserTyping={isOtherUserTyping}
         onReply={handleReply}
         onEdit={editMessage}
         onDelete={deleteMessage}
@@ -57,6 +62,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         onSendVoice={sendVoiceMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(undefined)}
+        onTyping={setTypingStatus}
       />
     </div>
   );

@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Message, User, ReactionType } from '../types';
 import MessageItem from './MessageItem';
+import TypingIndicator from './TypingIndicator';
 
 interface MessageListProps {
   messages: Message[];
   currentUser: User;
   loading: boolean;
+  isOtherUserTyping: boolean;
   onReply: (message: Message) => void;
   onEdit: (messageId: string, text: string) => void;
   onDelete: (messageId: string) => void;
@@ -17,6 +19,7 @@ const MessageList: React.FC<MessageListProps> = ({
   messages, 
   currentUser,
   loading,
+  isOtherUserTyping,
   onReply,
   onEdit,
   onDelete,
@@ -63,19 +66,22 @@ const MessageList: React.FC<MessageListProps> = ({
           No messages yet. Start the conversation!
         </div>
       ) : (
-        messages.map((message) => (
-          <MessageItem 
-            key={message.id} 
-            message={message} 
-            currentUser={currentUser}
-            onReply={onReply}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onReact={onReact}
-            onRemoveReaction={onRemoveReaction}
-            scrollToMessage={scrollToMessage}
-          />
-        ))
+        <>
+          {messages.map((message) => (
+            <MessageItem 
+              key={message.id} 
+              message={message} 
+              currentUser={currentUser}
+              onReply={onReply}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onReact={onReact}
+              onRemoveReaction={onRemoveReaction}
+              scrollToMessage={scrollToMessage}
+            />
+          ))}
+          {isOtherUserTyping && <TypingIndicator />}
+        </>
       )}
       <div ref={messagesEndRef} />
     </div>

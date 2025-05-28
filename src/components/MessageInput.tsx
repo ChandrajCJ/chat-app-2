@@ -7,13 +7,15 @@ interface MessageInputProps {
   onSendVoice: (blob: Blob) => void;
   replyingTo?: Message;
   onCancelReply?: () => void;
+  onTyping: (isTyping: boolean) => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({ 
   onSendMessage, 
   onSendVoice,
   replyingTo,
-  onCancelReply 
+  onCancelReply,
+  onTyping
 }) => {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -22,6 +24,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const chunks = useRef<Blob[]>([]);
   const timerRef = useRef<number>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (replyingTo) {
@@ -34,6 +37,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
       }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -43,6 +49,25 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (message.trim()) {
       onSendMessage(message, replyingTo);
       setMessage('');
+      onTyping(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMessage = e.target.value;
+    setMessage(newMessage);
+
+    // Handle typing indicator
+    if (newMessage.trim()) {
+      onTyping(true);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        onTyping(false);
+      }, 2000);
+    } else {
+      onTyping(false);
     }
   };
 
@@ -124,7 +149,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           ref={inputRef}
           type="text"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleInputChange}
           placeholder="Type a message..."
           className="flex-1 bg-gray-700 text-white rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-600 min-w-0"
           disabled={isRecording}
@@ -171,4 +196,4 @@ const MessageInput: React.FC<MessageInputProps> = ({
   );
 };
 
-export default MessageInput
+export default MessageInput;
