@@ -65,7 +65,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false);
-      }, 2000);
+      }, 1000);
     } else {
       onTyping(false);
     }
