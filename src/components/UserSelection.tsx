@@ -52,7 +52,13 @@ const UserSelection: React.FC = () => {
   };
 
   useEffect(() => {
-    inputRefs[0].current?.focus();
+    // Automatically focus and show keyboard on mobile
+    const firstInput = inputRefs[0].current;
+    if (firstInput) {
+      firstInput.focus();
+      // This will trigger the keyboard on mobile devices
+      firstInput.click();
+    }
   }, []);
 
   return (
@@ -74,8 +80,11 @@ const UserSelection: React.FC = () => {
               >
                 <input
                   ref={inputRefs[index]}
-                  type="password"
+                  type="tel"
                   inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="off"
+                  maxLength={1}
                   value={digit}
                   onChange={(e) => handleInput(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
