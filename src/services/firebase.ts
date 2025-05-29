@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,6 +16,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 
 // Enable multi-tab persistence for better offline support
 enableMultiTabIndexedDbPersistence(db)
@@ -26,4 +28,9 @@ enableMultiTabIndexedDbPersistence(db)
     }
   });
 
-export { db, storage };
+// Sign in anonymously when the app starts
+signInAnonymously(auth).catch((error) => {
+  console.error('Error signing in anonymously:', error);
+});
+
+export { db, storage, auth };
