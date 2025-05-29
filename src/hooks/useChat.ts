@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType } from '../types';
 
 export const useChat = (currentUser: User) => {
@@ -146,6 +147,30 @@ export const useChat = (currentUser: User) => {
     }
   };
 
+  const sendVoiceMessage = async (blob: Blob) => {
+    try {
+      const timestamp = Date.now();
+      const voiceRef = ref(storage, `voice-messages/${currentUser}-${timestamp}.webm`);
+      
+      // Upload the blob
+      await uploadBytes(voiceRef, blob);
+      
+      // Get the download URL
+      const voiceUrl = await getDownloadURL(voiceRef);
+      
+      // Add message to Firestore
+      await addDoc(collection(db, 'messages'), {
+        text: '🎤 Voice message',
+        sender: currentUser,
+        timestamp: serverTimestamp(),
+        read: false,
+        voiceUrl
+      });
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+    }
+  };
+
   const editMessage = async (messageId: string, newText: string) => {
     try {
       const messageRef = doc(db, 'messages', messageId);
@@ -210,6 +235,7 @@ export const useChat = (currentUser: User) => {
     deleteAllMessages,
     reactToMessage,
     removeReaction,
-    setTypingStatus
+    setTypingStatus,
+    sendVoiceMessage
   };
 };
