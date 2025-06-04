@@ -26,29 +26,28 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
   };
 
   return (
-    <div className="glass-panel px-4 py-3 sm:py-4 flex items-center justify-between border-b border-gray-700/50">
-      <div className="flex items-center gap-3">
+    <div className="bg-gray-800 p-4 flex items-center justify-between border-b border-gray-700">
+      <div className="flex items-center">
         <button 
           onClick={handleBack}
-          className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors"
+          className="mr-2 sm:mr-3 p-2 text-gray-400 hover:text-white transition"
         >
           <ArrowLeft size={20} />
         </button>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           <div className={`
-            relative p-2 rounded-full
-            ${otherUser === '🐞' ? 'bg-primary-600' : 'bg-accent-700'}
+            p-2 rounded-full mr-2 sm:mr-3 relative
+            ${otherUser === '🐞' ? 'bg-violet-700' : 'bg-blue-700'}
           `}>
             <UserRound size={20} className="text-white" />
             <span className={`
-              absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full 
-              border-2 border-gray-800
+              absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-800
               ${otherUserStatus.isOnline ? 'bg-green-500' : 'bg-gray-500'}
-            `} />
+            `}></span>
           </div>
           <div>
-            <h2 className="text-lg font-semibold">{otherUser}</h2>
+            <h2 className="font-semibold text-xl sm:text-2xl">{otherUser}</h2>
             <p className="text-xs text-gray-400 line-clamp-1">
               {otherUserStatus.isOnline 
                 ? 'Online'
@@ -61,7 +60,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
 
       <button
         onClick={handleDeleteAll}
-        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+        className="p-2 text-gray-400 hover:text-red-500 transition-colors duration-200"
         title="Delete all messages"
       >
         <Trash2 size={20} />
@@ -70,4 +69,4 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
   );
 };
 
-export default ChatHeader;
+export default ChatHeader
