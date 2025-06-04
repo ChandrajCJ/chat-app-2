@@ -29,26 +29,13 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     // Only scroll to bottom if a new message is added
     if (messages.length > prevMessagesLengthRef.current) {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      // Delay scroll to allow for content to render
-      scrollTimeoutRef.current = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
     prevMessagesLengthRef.current = messages.length;
-
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
   }, [messages]);
 
   const scrollToMessage = (messageId: string) => {
@@ -56,10 +43,7 @@ const MessageList: React.FC<MessageListProps> = ({
 
     const messageElement = containerRef.current.querySelector(`[data-message-id="${messageId}"]`);
     if (messageElement) {
-      messageElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center'
-      });
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -76,10 +60,7 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div 
-      ref={containerRef} 
-      className="flex-1 overflow-y-auto px-4 py-4 overscroll-contain"
-    >
+    <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-4">
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-500">
           No messages yet. Start the conversation!

@@ -25,8 +25,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const chunks = useRef<Blob[]>([]);
   const timerRef = useRef<number>();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const touchStartTime = useRef<number>(0);
-  const [showCancelHint, setShowCancelHint] = useState(false);
 
   useEffect(() => {
     if (replyingTo) {
@@ -59,6 +57,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const newMessage = e.target.value;
     setMessage(newMessage);
 
+    // Handle typing indicator
     if (newMessage.trim()) {
       onTyping(true);
       if (typingTimeoutRef.current) {
@@ -109,54 +108,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
       timerRef.current = window.setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-
-      touchStartTime.current = Date.now();
-      setShowCancelHint(true);
-      setTimeout(() => setShowCancelHint(false), 2000);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Please allow microphone access to send voice messages');
     }
   };
 
-  const stopRecording = (shouldCancel = false) => {
+  const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
-      const recordingDuration = Date.now() - touchStartTime.current;
-      
-      if (shouldCancel || recordingDuration < 500) {
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        chunks.current = [];
-      } else {
-        mediaRecorder.stop();
-      }
-      
+      mediaRecorder.stop();
       setIsRecording(false);
       setMediaRecorder(null);
-      setShowCancelHint(false);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    startRecording();
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (isRecording) {
-      const touch = e.touches[0];
-      const element = e.currentTarget;
-      const rect = element.getBoundingClientRect();
-      
-      // Calculate if the touch has moved significantly upward
-      if (touch.clientY < rect.top - 50) {
-        stopRecording(true);
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (isRecording) {
-      stopRecording();
     }
   };
 
@@ -167,7 +129,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 border-t border-gray-700 p-3 sm:p-4 safe-area-bottom">
+    <div className="bg-gray-800 border-t border-gray-700 p-3 sm:p-4">
       {replyingTo && (
         <div className="flex items-center justify-between bg-gray-700/50 p-2 rounded mb-2">
           <div className="flex-1 min-w-0">
@@ -199,7 +161,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => stopRecording(true)}
+              onClick={stopRecording}
               className="rounded-full p-2 bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
             >
               <Square size={20} />
@@ -209,17 +171,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <>
             <button
               type="button"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              className="relative rounded-full p-2 bg-gray-700 text-white hover:bg-gray-600 transition-colors duration-200 shrink-0 touch-none"
+              onClick={startRecording}
+              className="rounded-full p-2 bg-gray-700 text-white hover:bg-gray-600 transition-colors duration-200 shrink-0"
             >
               <Mic size={20} />
-              {showCancelHint && (
-                <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                  Slide up to cancel
-                </div>
-              )}
             </button>
             <button
               type="submit"
