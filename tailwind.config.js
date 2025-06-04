@@ -12,20 +12,27 @@ export default {
           500: '#3E3E56',
           400: '#6E6E91',
         },
-        violet: {
-          700: '#6D28D9',
-          600: '#7C3AED',
-          500: '#8B5CF6',
+        primary: {
+          900: '#1A1A2E',
+          800: '#16213E',
+          700: '#0F3460',
+          600: '#533483',
+          500: '#E94560',
         },
-        blue: {
-          700: '#1D4ED8',
-          600: '#2563EB',
-          500: '#3B82F6',
+        accent: {
+          900: '#2C3333',
+          800: '#2E4F4F',
+          700: '#0E8388',
+          600: '#CBE4DE',
         }
+      },
+      fontFamily: {
+        sans: ['Inter var', 'system-ui', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+        'slide-up': 'slideUp 0.2s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -38,6 +45,10 @@ export default {
           '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
           '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
         },
+        slideUp: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
       },
       spacing: {
         'safe': 'env(safe-area-inset-bottom)',
@@ -49,4 +60,4 @@ export default {
   plugins: [
     require('tailwind-scrollbar'),
   ],
-};
+}

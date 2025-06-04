@@ -121,24 +121,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
       data-message-id={message.id}
     >
       <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-        <div 
-          className={`
-            relative max-w-[85%] sm:max-w-[75%] px-3 py-2 sm:px-4 sm:py-2 rounded-2xl
-            ${isOwnMessage 
-              ? 'bg-violet-700 text-white rounded-tr-none' 
-              : 'bg-blue-700 text-white rounded-tl-none'
-            }
-          `}
-        >
+        <div className={isOwnMessage ? 'message-bubble-own' : 'message-bubble-other'}>
           {message.replyTo && (
             <div 
-              className="text-xs bg-gray-700/50 p-2 rounded mb-2 border-l-2 border-gray-500 cursor-pointer hover:bg-gray-700/70 transition-colors"
               onClick={handleReplyClick}
+              className="glass-panel rounded-lg p-2 mb-2 cursor-pointer hover:bg-gray-700/50 transition-colors"
             >
-              <div className="text-gray-400 truncate">{message.replyTo.sender}</div>
-              <div className="truncate max-w-full">{message.replyTo.text}</div>
+              <div className="text-gray-400 text-xs truncate">{message.replyTo.sender}</div>
+              <div className="text-sm truncate max-w-full">{message.replyTo.text}</div>
             </div>
           )}
+
           <div className="flex flex-col">
             <span className="text-sm font-medium flex items-center gap-2">
               {message.edited && (
@@ -149,7 +142,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             {message.voiceUrl ? (
               <button
                 onClick={handleVoicePlay}
-                className="flex items-center gap-2 mt-1 text-sm hover:text-violet-300"
+                className="flex items-center gap-2 mt-1 text-sm hover:text-violet-300 transition-colors"
               >
                 {isPlaying ? <Pause size={16} /> : <Play size={16} />}
                 <Mic size={16} />
@@ -161,7 +154,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   type="text"
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
-                  className="w-full bg-gray-700 text-white rounded px-2 py-1 text-sm"
+                  className="w-full bg-gray-700/50 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && editText.trim()) handleEdit();
                     if (e.key === 'Escape') setIsEditing(false);
@@ -172,44 +165,37 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   <button
                     onClick={handleEdit}
                     disabled={!editText.trim()}
-                    className={`
-                      px-3 py-1 rounded text-sm
-                      ${editText.trim()
-                        ? 'bg-violet-600 hover:bg-violet-500 text-white'
-                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      }
-                    `}
+                    className={`btn ${editText.trim() ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'}`}
                   >
                     Save
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="mt-1 break-words whitespace-pre-wrap sm:text-base">{message.text}</p>
+              <p className="mt-1 break-words whitespace-pre-wrap text-sm sm:text-base">{message.text}</p>
             )}
 
-          
-            <div className="flex items-center justify-end mt-1 space-x-1">
+            <div className="flex items-center justify-end mt-2 space-x-1.5">
               {isOwnMessage && (
                 <div className="relative">
                   <button
                     onClick={toggleMenu}
-                    className="text-gray-300 hover:text-white transition-colors duration-200 p-1"
+                    className="p-1 text-gray-300 hover:text-white transition-colors"
                   >
                     <MoreVertical size={14} />
                   </button>
                   {showMenu && (
-                    <div className="absolute bottom-full right-0 mb-1 bg-gray-800 rounded-lg shadow-lg py-1 min-w-[120px] z-10">
+                    <div className="absolute bottom-full right-0 mb-1 glass-panel rounded-lg py-1 min-w-[120px] z-10 animate-fade-in">
                       <button
                         onClick={startEditing}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700/50 text-gray-300 hover:text-white transition-colors"
                       >
                         <Edit2 size={14} />
                         Edit
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700/50 text-gray-300 hover:text-white transition-colors"
                       >
                         <Trash2 size={14} />
                         Delete
@@ -221,23 +207,18 @@ const MessageItem: React.FC<MessageItemProps> = ({
               <div className="relative">
                 <button
                   onClick={toggleReactions}
-                  className="text-gray-300 hover:text-violet-300 transition-colors duration-200"
+                  className="p-1 text-gray-300 hover:text-primary-500 transition-colors"
                 >
                   <SmilePlus size={14} />
                 </button>
                 {showReactions && (
-                  <div className={`
-                    absolute bottom-full ${isOwnMessage ? 'right-0' : '-left-2'} mb-1
-                    bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg py-1.5 px-2 flex gap-1.5 z-10
-                    border border-gray-700/50 max-w-[calc(100vw-2rem)] overflow-x-auto
-                    scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent
-                  `}>
+                  <div className="absolute bottom-full mb-1 glass-panel rounded-full py-1.5 px-2 flex gap-1.5 z-10 animate-fade-in">
                     {REACTIONS.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => handleReaction(emoji)}
                         className={`
-                          text-base hover:scale-125 transition-transform duration-200 shrink-0
+                          text-base hover:scale-125 transition-transform duration-200
                           ${message.reaction === emoji ? 'opacity-50' : 'opacity-100'}
                         `}
                       >
@@ -249,7 +230,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </div>
               <button
                 onClick={handleReply}
-                className="text-gray-300 hover:text-violet-300 transition-colors duration-200"
+                className="p-1 text-gray-300 hover:text-primary-500 transition-colors"
               >
                 <Reply size={14} />
               </button>
@@ -258,7 +239,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </span>
               {isOwnMessage && (
                 message.read ? (
-                  <CheckCheck size={14} className="text-violet-300" />
+                  <CheckCheck size={14} className="text-primary-500" />
                 ) : (
                   <Check size={14} className="text-gray-300" />
                 )
@@ -266,12 +247,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
             
             {message.reaction && typeof message.reaction === 'string' && (
-              <div className="inline-flex relative top-5 -mt-3 items-center px-1.5 py-0.5 rounded-full text-sm w-fit bg-[#262626] border-2 border-[black]">
+              <div className="inline-flex relative top-5 -mt-3 items-center px-2 py-1 rounded-full text-sm w-fit glass-panel">
                 {message.reaction}
               </div>
             )}
           </div>
-          
         </div>
       </div>
     </div>

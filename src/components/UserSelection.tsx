@@ -52,23 +52,21 @@ const UserSelection: React.FC = () => {
   };
 
   useEffect(() => {
-    // Automatically focus and show keyboard on mobile
     const firstInput = inputRefs[0].current;
     if (firstInput) {
       firstInput.focus();
-      // This will trigger the keyboard on mobile devices
       firstInput.click();
     }
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
+    <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gradient-to-b from-gray-900 to-primary-900 text-white p-4 safe-area-top safe-area-bottom">
       <div className="w-full max-w-xs flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-violet-600/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-violet-500" />
+          <div className="w-16 h-16 rounded-full bg-primary-600/20 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-primary-500" />
           </div>
-          <h2 className="text-xl font-medium text-gray-200">Enter the PIN love</h2>
+          <h2 className="text-xl font-medium text-gray-200">Enter the PIN</h2>
         </div>
 
         <div className="relative">
@@ -90,20 +88,20 @@ const UserSelection: React.FC = () => {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   className={`
                     w-14 h-14 sm:w-16 sm:h-16 text-2xl text-center
-                    bg-gray-800/50 backdrop-blur-sm
+                    glass-panel
                     rounded-2xl
                     transition-all duration-300
                     ${error 
                       ? 'border-2 border-red-500/50 animate-shake' 
-                      : 'border-2 border-gray-700/50 group-hover:border-gray-600/50 focus:border-violet-500/50'
+                      : 'border-2 border-gray-700/50 group-hover:border-primary-600/50 focus:border-primary-500/50'
                     }
-                    focus:outline-none focus:ring-2 focus:ring-violet-500/20
+                    focus:outline-none focus:ring-2 focus:ring-primary-500/20
                   `}
                 />
                 <div className={`
                   absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full
                   transition-all duration-300
-                  ${digit ? 'bg-violet-500' : 'bg-gray-700'}
+                  ${digit ? 'bg-primary-500' : 'bg-gray-700'}
                 `} />
               </div>
             ))}
