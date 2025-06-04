@@ -46,7 +46,7 @@ const MessageList: React.FC<MessageListProps> = ({
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const isNotAtBottom = scrollHeight - scrollTop - clientHeight > 100;
+      const isNotAtBottom = scrollHeight - scrollTop - clientHeight > 20;
       setShowScrollButton(isNotAtBottom);
     };
 
@@ -55,7 +55,9 @@ const MessageList: React.FC<MessageListProps> = ({
   }, []);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   };
 
   const scrollToMessage = (messageId: string) => {
@@ -80,10 +82,10 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div className="relative flex-1">
+    <div className="flex-1 relative h-full">
       <div 
         ref={containerRef} 
-        className="h-full overflow-y-auto px-4 py-4"
+        className="absolute inset-0 overflow-y-auto px-4 py-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent"
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500">
@@ -105,18 +107,18 @@ const MessageList: React.FC<MessageListProps> = ({
               />
             ))}
             {isOtherUserTyping && <TypingIndicator />}
+            <div ref={messagesEndRef} />
           </>
         )}
-        <div ref={messagesEndRef} />
       </div>
       
       {showScrollButton && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 p-2 bg-violet-600 text-white rounded-full shadow-lg hover:bg-violet-700 transition-all duration-200 transform hover:scale-105 animate-fade-in"
+          className="fixed bottom-24 right-6 p-2.5 bg-violet-600 text-white rounded-full shadow-lg hover:bg-violet-700 transition-all duration-200 transform hover:scale-105 z-10"
           aria-label="Scroll to bottom"
         >
-          <ChevronDown size={24} />
+          <ChevronDown size={20} />
         </button>
       )}
     </div>
