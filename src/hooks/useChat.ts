@@ -149,14 +149,17 @@ export const useChat = (currentUser: User) => {
 
   const sendVoiceMessage = async (blob: Blob) => {
     try {
-      const timestamp = Date.now();
-      const voiceRef = ref(storage, `voice-messages/${currentUser}-${timestamp}.webm`);
+      // Convert blob to File for better handling
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
       
-      // Upload the blob
-      await uploadBytes(voiceRef, blob);
+      // Create a reference to the storage location
+      const voiceRef = ref(storage, `voice-messages/${currentUser}-${Date.now()}.webm`);
+      
+      // Upload the file
+      const uploadResult = await uploadBytes(voiceRef, file);
       
       // Get the download URL
-      const voiceUrl = await getDownloadURL(voiceRef);
+      const voiceUrl = await getDownloadURL(uploadResult.ref);
       
       // Add message to Firestore
       await addDoc(collection(db, 'messages'), {
@@ -168,6 +171,7 @@ export const useChat = (currentUser: User) => {
       });
     } catch (error) {
       console.error('Error sending voice message:', error);
+      alert('Failed to send voice message. Please try again.');
     }
   };
 
