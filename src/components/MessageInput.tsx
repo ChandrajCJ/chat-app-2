@@ -21,14 +21,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chunks = useRef<Blob[]>([]);
   const timerRef = useRef<number>();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (replyingTo) {
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   }, [replyingTo]);
 
@@ -50,12 +50,22 @@ const MessageInput: React.FC<MessageInputProps> = ({
       onSendMessage(message, replyingTo);
       setMessage('');
       onTyping(false);
+      
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMessage = e.target.value;
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    const newMessage = textarea.value;
     setMessage(newMessage);
+
+    // Auto-resize textarea
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 
     // Handle typing indicator
     if (newMessage.trim()) {
@@ -68,6 +78,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }, 1000);
     } else {
       onTyping(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
@@ -144,15 +161,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
           </button>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <input
-          ref={inputRef}
-          type="text"
+      <form onSubmit={handleSubmit} className="flex items-end gap-2">
+        <textarea
+          ref={textareaRef}
           value={message}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="flex-1 bg-gray-700 text-white rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-600 min-w-0"
+          className="flex-1 bg-gray-700 text-white rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-600 min-w-0 max-h-[150px] resize-none"
           disabled={isRecording}
+          rows={1}
         />
         {isRecording ? (
           <div className="flex items-center gap-2">
