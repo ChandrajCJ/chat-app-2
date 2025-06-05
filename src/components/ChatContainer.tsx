@@ -38,7 +38,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
   };
 
   return (
-    <div className="flex flex-col h-[100vh] bg-gray-900 safe-area-bottom">
+    <div className="flex flex-col h-[100dvh] bg-gray-900 safe-area-bottom">
       <ChatHeader 
         currentUser={currentUser} 
         userStatuses={userStatuses}

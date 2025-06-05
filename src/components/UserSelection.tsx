@@ -52,15 +52,17 @@ const UserSelection: React.FC = () => {
   };
 
   useEffect(() => {
+    // Automatically focus and show keyboard on mobile
     const firstInput = inputRefs[0].current;
     if (firstInput) {
       firstInput.focus();
+      // This will trigger the keyboard on mobile devices
       firstInput.click();
     }
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100vh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
+    <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
       <div className="w-full max-w-xs flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-violet-600/10 flex items-center justify-center">
