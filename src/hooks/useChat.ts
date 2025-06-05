@@ -149,19 +149,19 @@ export const useChat = (currentUser: User) => {
 
   const sendVoiceMessage = async (blob: Blob) => {
     try {
-      // Convert blob to File for better handling
-      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      // Create a unique filename with timestamp and user
+      const filename = `voice-${currentUser}-${Date.now()}.webm`;
       
       // Create a reference to the storage location
-      const voiceRef = ref(storage, `voice-messages/${currentUser}-${Date.now()}.webm`);
+      const voiceRef = ref(storage, `voice-messages/${filename}`);
       
-      // Upload the file
-      const uploadResult = await uploadBytes(voiceRef, file);
+      // Upload the blob directly
+      const uploadResult = await uploadBytes(voiceRef, blob);
       
       // Get the download URL
       const voiceUrl = await getDownloadURL(uploadResult.ref);
       
-      // Add message to Firestore
+      // Add message to Firestore with voice URL
       await addDoc(collection(db, 'messages'), {
         text: '🎤 Voice message',
         sender: currentUser,
