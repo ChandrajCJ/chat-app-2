@@ -25,6 +25,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const chunks = useRef<Blob[]>([]);
   const timerRef = useRef<number>();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (replyingTo) {
@@ -39,6 +40,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+      }
+      // Clean up media stream on unmount
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
@@ -95,9 +100,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
         video: false
       });
       
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
-      });
+      streamRef.current = stream;
+      
+      const recorder = new MediaRecorder(stream);
       
       chunks.current = [];
       recorder.ondataavailable = (e) => {
@@ -109,7 +114,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
       recorder.onstop = () => {
         const blob = new Blob(chunks.current, { type: 'audio/webm' });
         onSendVoice(blob);
-        stream.getTracks().forEach(track => track.stop());
+        
+        // Clean up
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        
         chunks.current = [];
         setRecordingTime(0);
         if (timerRef.current) {
@@ -117,7 +128,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         }
       };
 
-      recorder.start(1000);
+      recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
       
