@@ -19,7 +19,7 @@ const UserSelection: React.FC = () => {
     if (pinString.length === 4) {
       if (pinString === '1204') {
         setUser('🐞');
-      } else if (pinString === '6969') {
+      } else if (pinString === '1710') {
         setUser('🦎');
       } else {
         setError(true);
