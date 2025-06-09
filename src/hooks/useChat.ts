@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { socket, api } from '../services/api';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType } from '../types';
 
 export const useChat = (currentUser: User) => {
@@ -10,127 +12,125 @@ export const useChat = (currentUser: User) => {
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
 
-  // Initialize socket connection and load initial data
+  // Handle user status
   useEffect(() => {
-    const initializeChat = async () => {
-      try {
-        // Load initial messages
-        const initialMessages = await api.getMessages();
-        setMessages(initialMessages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        })));
+    const userStatusRef = doc(db, 'status', currentUser);
+    
+    const updateStatus = async () => {
+      await setDoc(userStatusRef, {
+        lastSeen: serverTimestamp(),
+        isOnline: true,
+        isTyping: false
+      });
+    };
 
-        // Load user statuses
-        const statuses = await api.getUserStatuses();
-        const statusMap: UserStatuses = {
-          '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
-          '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
-        };
+    updateStatus();
 
-        statuses.forEach((status: any) => {
-          statusMap[status.userId as User] = {
-            lastSeen: new Date(status.lastSeen),
-            isOnline: status.isOnline,
-            isTyping: status.isTyping
-          };
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setDoc(userStatusRef, {
+          lastSeen: serverTimestamp(),
+          isOnline: false,
+          isTyping: false
         });
-
-        setUserStatuses(statusMap);
-        setLoading(false);
-
-        // Login user
-        socket.emit('user-login', currentUser);
-      } catch (error) {
-        console.error('Failed to initialize chat:', error);
-        setLoading(false);
+      } else {
+        updateStatus();
       }
     };
 
-    initializeChat();
+    const handleBeforeUnload = () => {
+      setDoc(userStatusRef, {
+        lastSeen: serverTimestamp(),
+        isOnline: false,
+        isTyping: false
+      });
+    };
 
-    // Socket event listeners
-    socket.on('new-message', (message: any) => {
-      const formattedMessage = {
-        ...message,
-        id: message._id,
-        timestamp: new Date(message.timestamp)
-      };
-      setMessages(prev => [...prev, formattedMessage]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
-      // Mark as read if it's from another user
-      if (message.sender !== currentUser) {
-        socket.emit('mark-as-read', { messageId: message._id, userId: currentUser });
-      }
-    });
-
-    socket.on('message-edited', (message: any) => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === message._id 
-          ? { ...message, id: message._id, timestamp: new Date(message.timestamp) }
-          : msg
-      ));
-    });
-
-    socket.on('message-deleted', (messageId: string) => {
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    });
-
-    socket.on('message-reaction', (message: any) => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === message._id 
-          ? { ...message, id: message._id, timestamp: new Date(message.timestamp) }
-          : msg
-      ));
-    });
-
-    socket.on('message-read', ({ messageId }: { messageId: string }) => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { ...msg, read: true } : msg
-      ));
-    });
-
-    socket.on('user-statuses', (statuses: any[]) => {
-      const statusMap: UserStatuses = { ...userStatuses };
-      statuses.forEach((status: any) => {
-        statusMap[status.userId as User] = {
-          lastSeen: new Date(status.lastSeen),
-          isOnline: status.isOnline,
-          isTyping: status.isTyping
+    const statusRef = collection(db, 'status');
+    const unsubscribeStatus = onSnapshot(statusRef, (snapshot) => {
+      const newStatuses = { ...userStatuses };
+      
+      snapshot.docs.forEach((doc) => {
+        const user = doc.id as User;
+        const data = doc.data();
+        newStatuses[user] = {
+          lastSeen: data.lastSeen?.toDate() || new Date(),
+          isOnline: data.isOnline || false,
+          isTyping: data.isTyping || false
         };
       });
-      setUserStatuses(statusMap);
-    });
-
-    socket.on('user-typing', ({ userId, isTyping }: { userId: User; isTyping: boolean }) => {
-      setUserStatuses(prev => ({
-        ...prev,
-        [userId]: { ...prev[userId], isTyping }
-      }));
-    });
-
-    socket.on('all-messages-deleted', () => {
-      setMessages([]);
+      
+      setUserStatuses(newStatuses);
     });
 
     return () => {
-      socket.off('new-message');
-      socket.off('message-edited');
-      socket.off('message-deleted');
-      socket.off('message-reaction');
-      socket.off('message-read');
-      socket.off('user-statuses');
-      socket.off('user-typing');
-      socket.off('all-messages-deleted');
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      unsubscribeStatus();
+      setDoc(userStatusRef, {
+        lastSeen: serverTimestamp(),
+        isOnline: false,
+        isTyping: false
+      });
     };
+  }, [currentUser]);
+
+  // Handle typing indicator
+  const setTypingStatus = async (isTyping: boolean) => {
+    const userStatusRef = doc(db, 'status', currentUser);
+    await updateDoc(userStatusRef, { isTyping });
+  };
+
+  // Listen to messages in real-time
+  useEffect(() => {
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef,
+      orderBy('timestamp', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          read: data.read || false,
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction
+        } as Message;
+      });
+      
+      setMessages(newMessages);
+      setLoading(false);
+
+      // Mark messages as read if they're from other users
+      newMessages.forEach(async (message) => {
+        if (message.sender !== currentUser && !message.read) {
+          const messageRef = doc(db, 'messages', message.id);
+          await updateDoc(messageRef, { read: true });
+        }
+      });
+    });
+
+    return () => unsubscribe();
   }, [currentUser]);
 
   const sendMessage = async (text: string, replyTo?: Message) => {
     try {
+      await setTypingStatus(false);
       const messageData: any = {
         text,
         sender: currentUser,
-        timestamp: new Date()
+        timestamp: serverTimestamp(),
+        read: false
       };
 
       if (replyTo) {
@@ -141,7 +141,7 @@ export const useChat = (currentUser: User) => {
         };
       }
 
-      socket.emit('send-message', messageData);
+      await addDoc(collection(db, 'messages'), messageData);
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -149,7 +149,26 @@ export const useChat = (currentUser: User) => {
 
   const sendVoiceMessage = async (blob: Blob) => {
     try {
-      await api.uploadVoiceMessage(blob, currentUser);
+      // Create a unique filename with timestamp and user
+      const filename = `voice-${currentUser}-${Date.now()}.webm`;
+      
+      // Create a reference to the storage location
+      const voiceRef = ref(storage, `voice-messages/${filename}`);
+      
+      // Upload the blob directly
+      const uploadResult = await uploadBytes(voiceRef, blob);
+      
+      // Get the download URL
+      const voiceUrl = await getDownloadURL(uploadResult.ref);
+      
+      // Add message to Firestore with voice URL
+      await addDoc(collection(db, 'messages'), {
+        text: '🎤 Voice message',
+        sender: currentUser,
+        timestamp: serverTimestamp(),
+        read: false,
+        voiceUrl
+      });
     } catch (error) {
       console.error('Error sending voice message:', error);
       alert('Failed to send voice message. Please try again.');
@@ -158,7 +177,11 @@ export const useChat = (currentUser: User) => {
 
   const editMessage = async (messageId: string, newText: string) => {
     try {
-      socket.emit('edit-message', { messageId, text: newText });
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, {
+        text: newText,
+        edited: true
+      });
     } catch (error) {
       console.error('Error editing message:', error);
     }
@@ -166,7 +189,7 @@ export const useChat = (currentUser: User) => {
 
   const deleteMessage = async (messageId: string) => {
     try {
-      socket.emit('delete-message', messageId);
+      await deleteDoc(doc(db, 'messages', messageId));
     } catch (error) {
       console.error('Error deleting message:', error);
     }
@@ -174,7 +197,11 @@ export const useChat = (currentUser: User) => {
 
   const deleteAllMessages = async () => {
     try {
-      await api.deleteAllMessages();
+      const messagesRef = collection(db, 'messages');
+      const snapshot = await getDocs(messagesRef);
+      
+      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
     } catch (error) {
       console.error('Error deleting all messages:', error);
     }
@@ -182,7 +209,10 @@ export const useChat = (currentUser: User) => {
 
   const reactToMessage = async (messageId: string, emoji: ReactionType) => {
     try {
-      socket.emit('react-to-message', { messageId, reaction: emoji });
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, {
+        reaction: emoji
+      });
     } catch (error) {
       console.error('Error adding reaction:', error);
     }
@@ -190,17 +220,12 @@ export const useChat = (currentUser: User) => {
 
   const removeReaction = async (messageId: string) => {
     try {
-      socket.emit('remove-reaction', messageId);
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, {
+        reaction: null
+      });
     } catch (error) {
       console.error('Error removing reaction:', error);
-    }
-  };
-
-  const setTypingStatus = async (isTyping: boolean) => {
-    try {
-      socket.emit('typing', { userId: currentUser, isTyping });
-    } catch (error) {
-      console.error('Error setting typing status:', error);
     }
   };
 
