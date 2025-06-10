@@ -68,7 +68,7 @@ const UserSelection: React.FC = () => {
           <div className="w-16 h-16 rounded-full bg-violet-600/10 flex items-center justify-center">
             <Lock className="w-8 h-8 text-violet-500" />
           </div>
-          <h2 className="text-xl font-medium text-gray-200">Enter the PIN love</h2>
+          <h2 className="text-xl font-medium text-gray-200">Enter the PIN love test</h2>
         </div>
 
         <div className="relative">
