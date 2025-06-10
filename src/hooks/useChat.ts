@@ -18,6 +18,7 @@ export const useChat = (currentUser: User) => {
   const lastStatusUpdateRef = useRef<number>(0);
   const pendingMessagesToMarkReadRef = useRef<Set<string>>(new Set());
   const markReadTimeoutRef = useRef<NodeJS.Timeout>();
+  const isTypingRef = useRef<boolean>(false);
 
   // Debounced status update function
   const debouncedStatusUpdate = useCallback(async (updates: any) => {
@@ -145,35 +146,41 @@ export const useChat = (currentUser: User) => {
     };
   }, [currentUser, debouncedStatusUpdate]);
 
-  // Optimized typing indicator with debouncing
+  // Simplified typing indicator
   const setTypingStatus = useCallback(async (isTyping: boolean) => {
+    // Clear any existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    if (isTyping) {
-      // Debounce typing updates - only send after user stops typing for 500ms
-      typingTimeoutRef.current = setTimeout(async () => {
-        try {
-          const userStatusRef = doc(db, 'status', currentUser);
+    try {
+      const userStatusRef = doc(db, 'status', currentUser);
+      
+      if (isTyping) {
+        // Only update if not already typing to reduce writes
+        if (!isTypingRef.current) {
           await updateDoc(userStatusRef, { isTyping: true });
-          
-          // Auto-clear typing status after 3 seconds
-          setTimeout(async () => {
-            await updateDoc(userStatusRef, { isTyping: false });
-          }, 3000);
-        } catch (error) {
-          console.error('Error updating typing status:', error);
+          isTypingRef.current = true;
         }
-      }, 500);
-    } else {
-      // Immediately clear typing status
-      try {
-        const userStatusRef = doc(db, 'status', currentUser);
-        await updateDoc(userStatusRef, { isTyping: false });
-      } catch (error) {
-        console.error('Error clearing typing status:', error);
+        
+        // Auto-clear typing status after 3 seconds
+        typingTimeoutRef.current = setTimeout(async () => {
+          try {
+            await updateDoc(userStatusRef, { isTyping: false });
+            isTypingRef.current = false;
+          } catch (error) {
+            console.error('Error clearing typing status:', error);
+          }
+        }, 3000);
+      } else {
+        // Immediately clear typing status
+        if (isTypingRef.current) {
+          await updateDoc(userStatusRef, { isTyping: false });
+          isTypingRef.current = false;
+        }
       }
+    } catch (error) {
+      console.error('Error updating typing status:', error);
     }
   }, [currentUser]);
 

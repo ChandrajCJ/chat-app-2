@@ -69,18 +69,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 
-    // Optimized typing indicator - only trigger when user is actively typing
+    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
     if (newMessage.trim()) {
+      // Start typing indicator
       onTyping(true);
-      // Clear typing status after 2 seconds of inactivity
+      
+      // Clear typing status after 1.5 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false);
-      }, 2000);
+      }, 1500);
     } else {
+      // Clear typing immediately if input is empty
       onTyping(false);
     }
   };
