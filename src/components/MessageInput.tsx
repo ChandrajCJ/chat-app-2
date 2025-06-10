@@ -41,7 +41,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      // Clean up media stream on unmount
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -56,7 +55,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
       setMessage('');
       onTyping(false);
       
-      // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -68,19 +66,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const newMessage = textarea.value;
     setMessage(newMessage);
 
-    // Auto-resize textarea
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 
-    // Handle typing indicator
+    // Optimized typing indicator - only trigger when user is actively typing
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
     if (newMessage.trim()) {
       onTyping(true);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      // Clear typing status after 2 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false);
-      }, 1000);
+      }, 2000);
     } else {
       onTyping(false);
     }
@@ -102,7 +101,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
       
       streamRef.current = stream;
       
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
       
       chunks.current = [];
       recorder.ondataavailable = (e) => {
@@ -112,10 +113,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunks.current, { type: 'audio/webm' });
+        const blob = new Blob(chunks.current, { type: 'audio/webm;codecs=opus' });
         onSendVoice(blob);
         
-        // Clean up
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -128,7 +128,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         }
       };
 
-      recorder.start();
+      recorder.start(1000); // Collect data every second
       setMediaRecorder(recorder);
       setIsRecording(true);
       

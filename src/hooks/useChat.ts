@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc } from 'firebase/firestore';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType } from '../types';
@@ -12,43 +12,96 @@ export const useChat = (currentUser: User) => {
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
 
-  // Handle user status
-  useEffect(() => {
-    const userStatusRef = doc(db, 'status', currentUser);
-    
-    const updateStatus = async () => {
-      await setDoc(userStatusRef, {
-        lastSeen: serverTimestamp(),
-        isOnline: true,
-        isTyping: false
-      });
-    };
+  // Refs for optimization
+  const statusUpdateTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastStatusUpdateRef = useRef<number>(0);
+  const pendingMessagesToMarkReadRef = useRef<Set<string>>(new Set());
+  const markReadTimeoutRef = useRef<NodeJS.Timeout>();
 
-    updateStatus();
+  // Debounced status update function
+  const debouncedStatusUpdate = useCallback(async (updates: any) => {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastStatusUpdateRef.current;
+    
+    // Only update if it's been at least 5 seconds since last update
+    if (timeSinceLastUpdate < 5000) {
+      if (statusUpdateTimeoutRef.current) {
+        clearTimeout(statusUpdateTimeoutRef.current);
+      }
+      
+      statusUpdateTimeoutRef.current = setTimeout(() => {
+        debouncedStatusUpdate(updates);
+      }, 5000 - timeSinceLastUpdate);
+      return;
+    }
+
+    try {
+      const userStatusRef = doc(db, 'status', currentUser);
+      await setDoc(userStatusRef, {
+        ...updates,
+        lastSeen: serverTimestamp()
+      }, { merge: true });
+      lastStatusUpdateRef.current = now;
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  }, [currentUser]);
+
+  // Batch mark messages as read
+  const batchMarkMessagesAsRead = useCallback(async () => {
+    if (pendingMessagesToMarkReadRef.current.size === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      const messageIds = Array.from(pendingMessagesToMarkReadRef.current);
+      
+      messageIds.forEach(messageId => {
+        const messageRef = doc(db, 'messages', messageId);
+        batch.update(messageRef, { read: true });
+      });
+
+      await batch.commit();
+      pendingMessagesToMarkReadRef.current.clear();
+    } catch (error) {
+      console.error('Error batch marking messages as read:', error);
+    }
+  }, []);
+
+  // Handle user status with optimization
+  useEffect(() => {
+    // Set initial online status
+    debouncedStatusUpdate({ isOnline: true, isTyping: false });
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        // Immediately update to offline when tab becomes hidden
+        const userStatusRef = doc(db, 'status', currentUser);
         setDoc(userStatusRef, {
           lastSeen: serverTimestamp(),
           isOnline: false,
           isTyping: false
-        });
+        }, { merge: true });
       } else {
-        updateStatus();
+        // Update to online when tab becomes visible
+        debouncedStatusUpdate({ isOnline: true, isTyping: false });
       }
     };
 
     const handleBeforeUnload = () => {
+      // Use sendBeacon for more reliable offline status update
+      const userStatusRef = doc(db, 'status', currentUser);
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: false,
         isTyping: false
-      });
+      }, { merge: true });
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
+    // Listen to status changes with reduced frequency
     const statusRef = collection(db, 'status');
     const unsubscribeStatus = onSnapshot(statusRef, (snapshot) => {
       const newStatuses = { ...userStatuses };
@@ -70,26 +123,67 @@ export const useChat = (currentUser: User) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       unsubscribeStatus();
+      
+      // Clear timeouts
+      if (statusUpdateTimeoutRef.current) {
+        clearTimeout(statusUpdateTimeoutRef.current);
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+      }
+
+      // Final offline status update
+      const userStatusRef = doc(db, 'status', currentUser);
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: false,
         isTyping: false
-      });
+      }, { merge: true });
     };
+  }, [currentUser, debouncedStatusUpdate]);
+
+  // Optimized typing indicator with debouncing
+  const setTypingStatus = useCallback(async (isTyping: boolean) => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    if (isTyping) {
+      // Debounce typing updates - only send after user stops typing for 500ms
+      typingTimeoutRef.current = setTimeout(async () => {
+        try {
+          const userStatusRef = doc(db, 'status', currentUser);
+          await updateDoc(userStatusRef, { isTyping: true });
+          
+          // Auto-clear typing status after 3 seconds
+          setTimeout(async () => {
+            await updateDoc(userStatusRef, { isTyping: false });
+          }, 3000);
+        } catch (error) {
+          console.error('Error updating typing status:', error);
+        }
+      }, 500);
+    } else {
+      // Immediately clear typing status
+      try {
+        const userStatusRef = doc(db, 'status', currentUser);
+        await updateDoc(userStatusRef, { isTyping: false });
+      } catch (error) {
+        console.error('Error clearing typing status:', error);
+      }
+    }
   }, [currentUser]);
 
-  // Handle typing indicator
-  const setTypingStatus = async (isTyping: boolean) => {
-    const userStatusRef = doc(db, 'status', currentUser);
-    await updateDoc(userStatusRef, { isTyping });
-  };
-
-  // Listen to messages in real-time
+  // Listen to messages with optimization
   useEffect(() => {
     const messagesRef = collection(db, 'messages');
     const q = query(
       messagesRef,
-      orderBy('timestamp', 'asc')
+      orderBy('timestamp', 'desc'),
+      limit(50) // Limit initial load to last 50 messages
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -106,26 +200,40 @@ export const useChat = (currentUser: User) => {
           voiceUrl: data.voiceUrl,
           reaction: data.reaction
         } as Message;
-      });
+      }).reverse(); // Reverse to get chronological order
       
       setMessages(newMessages);
       setLoading(false);
 
-      // Mark messages as read if they're from other users
-      newMessages.forEach(async (message) => {
-        if (message.sender !== currentUser && !message.read) {
-          const messageRef = doc(db, 'messages', message.id);
-          await updateDoc(messageRef, { read: true });
+      // Batch mark unread messages from other users as read
+      const unreadMessages = newMessages.filter(
+        message => message.sender !== currentUser && !message.read
+      );
+
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach(message => {
+          pendingMessagesToMarkReadRef.current.add(message.id);
+        });
+
+        // Debounce batch read updates
+        if (markReadTimeoutRef.current) {
+          clearTimeout(markReadTimeoutRef.current);
         }
-      });
+        
+        markReadTimeoutRef.current = setTimeout(() => {
+          batchMarkMessagesAsRead();
+        }, 1000);
+      }
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, batchMarkMessagesAsRead]);
 
   const sendMessage = async (text: string, replyTo?: Message) => {
     try {
-      await setTypingStatus(false);
+      // Clear typing status immediately when sending
+      setTypingStatus(false);
+      
       const messageData: any = {
         text,
         sender: currentUser,
@@ -149,19 +257,12 @@ export const useChat = (currentUser: User) => {
 
   const sendVoiceMessage = async (blob: Blob) => {
     try {
-      // Create a unique filename with timestamp and user
       const filename = `voice-${currentUser}-${Date.now()}.webm`;
-      
-      // Create a reference to the storage location
       const voiceRef = ref(storage, `voice-messages/${filename}`);
       
-      // Upload the blob directly
       const uploadResult = await uploadBytes(voiceRef, blob);
-      
-      // Get the download URL
       const voiceUrl = await getDownloadURL(uploadResult.ref);
       
-      // Add message to Firestore with voice URL
       await addDoc(collection(db, 'messages'), {
         text: '🎤 Voice message',
         sender: currentUser,
@@ -200,8 +301,13 @@ export const useChat = (currentUser: User) => {
       const messagesRef = collection(db, 'messages');
       const snapshot = await getDocs(messagesRef);
       
-      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
+      // Use batch for better performance
+      const batch = writeBatch(db);
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      
+      await batch.commit();
     } catch (error) {
       console.error('Error deleting all messages:', error);
     }
