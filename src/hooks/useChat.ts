@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType } from '../types';
@@ -184,13 +184,13 @@ export const useChat = (currentUser: User) => {
     }
   }, [currentUser]);
 
-  // Listen to messages with optimization
+  // Listen to messages - removed limit to show all messages
   useEffect(() => {
     const messagesRef = collection(db, 'messages');
     const q = query(
       messagesRef,
-      orderBy('timestamp', 'desc'),
-      limit(50) // Limit initial load to last 50 messages
+      orderBy('timestamp', 'desc')
+      // Removed limit(50) to show all messages
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
