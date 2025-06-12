@@ -29,14 +29,56 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
+  const lastMessageIdRef = useRef<string>('');
 
   useEffect(() => {
-    // Only scroll to bottom if a new message is added
-    if (messages.length > prevMessagesLengthRef.current) {
+    const shouldScroll = () => {
+      if (messages.length === 0) return false;
+      
+      const lastMessage = messages[messages.length - 1];
+      const isNewMessage = messages.length > prevMessagesLengthRef.current;
+      const isDifferentMessage = lastMessage.id !== lastMessageIdRef.current;
+      
+      // Always scroll for new messages or when the last message changes
+      if (isNewMessage || isDifferentMessage) {
+        // Check if user is near bottom of chat (within 100px)
+        if (containerRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+          const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+          
+          // Auto-scroll if user is near bottom OR if it's their own message
+          return isNearBottom || lastMessage.sender === currentUser;
+        }
+        return true;
+      }
+      
+      return false;
+    };
+
+    if (shouldScroll()) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
+
+    // Update refs
     prevMessagesLengthRef.current = messages.length;
-  }, [messages]);
+    if (messages.length > 0) {
+      lastMessageIdRef.current = messages[messages.length - 1].id;
+    }
+  }, [messages, currentUser]);
+
+  // Also scroll when typing indicator appears/disappears
+  useEffect(() => {
+    if (isOtherUserTyping && containerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      
+      if (isNearBottom) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [isOtherUserTyping]);
 
   const scrollToMessage = (messageId: string) => {
     if (!containerRef.current) return;
