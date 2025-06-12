@@ -15,37 +15,37 @@ export const useChat = (currentUser: User) => {
   // Refs for optimization
   const statusUpdateTimeoutRef = useRef<NodeJS.Timeout>();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastStatusUpdateRef = useRef<number>(0);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout>();
   const pendingMessagesToMarkReadRef = useRef<Set<string>>(new Set());
   const markReadTimeoutRef = useRef<NodeJS.Timeout>();
   const isTypingRef = useRef<boolean>(false);
+  const isOnlineRef = useRef<boolean>(false);
 
-  // Debounced status update function
-  const debouncedStatusUpdate = useCallback(async (updates: any) => {
-    const now = Date.now();
-    const timeSinceLastUpdate = now - lastStatusUpdateRef.current;
-    
-    // Only update if it's been at least 5 seconds since last update
-    if (timeSinceLastUpdate < 5000) {
-      if (statusUpdateTimeoutRef.current) {
-        clearTimeout(statusUpdateTimeoutRef.current);
-      }
-      
-      statusUpdateTimeoutRef.current = setTimeout(() => {
-        debouncedStatusUpdate(updates);
-      }, 5000 - timeSinceLastUpdate);
-      return;
-    }
-
+  // Immediate status update function (no debouncing for critical updates)
+  const updateStatusImmediately = useCallback(async (updates: any) => {
     try {
       const userStatusRef = doc(db, 'status', currentUser);
       await setDoc(userStatusRef, {
         ...updates,
         lastSeen: serverTimestamp()
       }, { merge: true });
-      lastStatusUpdateRef.current = now;
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error('Error updating status immediately:', error);
+    }
+  }, [currentUser]);
+
+  // Heartbeat function to maintain online status
+  const sendHeartbeat = useCallback(async () => {
+    if (document.hidden || !isOnlineRef.current) return;
+    
+    try {
+      const userStatusRef = doc(db, 'status', currentUser);
+      await updateDoc(userStatusRef, {
+        lastSeen: serverTimestamp(),
+        isOnline: true
+      });
+    } catch (error) {
+      console.error('Error sending heartbeat:', error);
     }
   }, [currentUser]);
 
@@ -69,40 +69,96 @@ export const useChat = (currentUser: User) => {
     }
   }, []);
 
-  // Handle user status with optimization
+  // Handle user status with improved accuracy
   useEffect(() => {
-    // Set initial online status
-    debouncedStatusUpdate({ isOnline: true, isTyping: false });
+    // Set initial online status immediately
+    isOnlineRef.current = true;
+    updateStatusImmediately({ isOnline: true, isTyping: false });
+
+    // Start heartbeat to maintain online status (every 30 seconds)
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // Immediately update to offline when tab becomes hidden
-        const userStatusRef = doc(db, 'status', currentUser);
-        setDoc(userStatusRef, {
-          lastSeen: serverTimestamp(),
-          isOnline: false,
-          isTyping: false
-        }, { merge: true });
+        isOnlineRef.current = false;
+        updateStatusImmediately({ isOnline: false, isTyping: false });
+        
+        // Clear heartbeat when hidden
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+        }
       } else {
-        // Update to online when tab becomes visible
-        debouncedStatusUpdate({ isOnline: true, isTyping: false });
+        // Immediately update to online when tab becomes visible
+        isOnlineRef.current = true;
+        updateStatusImmediately({ isOnline: true, isTyping: false });
+        
+        // Restart heartbeat
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
       }
     };
 
+    const handleFocus = () => {
+      isOnlineRef.current = true;
+      updateStatusImmediately({ isOnline: true });
+      
+      // Restart heartbeat on focus
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+    };
+
+    const handleBlur = () => {
+      // Don't immediately go offline on blur, wait for visibility change
+      // This prevents false offline status when clicking outside the window
+    };
+
     const handleBeforeUnload = () => {
-      // Use sendBeacon for more reliable offline status update
+      // Use navigator.sendBeacon for more reliable offline status update
+      isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
+      
+      // Try sendBeacon first (more reliable), fallback to regular update
+      const data = JSON.stringify({
+        isOnline: false,
+        isTyping: false,
+        lastSeen: new Date().toISOString()
+      });
+      
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(`/api/status/${currentUser}`, data);
+      }
+      
+      // Also try regular update as fallback
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: false,
         isTyping: false
-      }, { merge: true });
+      }, { merge: true }).catch(() => {
+        // Ignore errors on page unload
+      });
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    const handleOnline = () => {
+      isOnlineRef.current = true;
+      updateStatusImmediately({ isOnline: true });
+    };
 
-    // Listen to status changes with reduced frequency
+    const handleOffline = () => {
+      isOnlineRef.current = false;
+      updateStatusImmediately({ isOnline: false, isTyping: false });
+    };
+
+    // Add multiple event listeners for better detection
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Listen to status changes with real-time updates
     const statusRef = collection(db, 'status');
     const unsubscribeStatus = onSnapshot(statusRef, (snapshot) => {
       const newStatuses = { ...userStatuses };
@@ -110,22 +166,37 @@ export const useChat = (currentUser: User) => {
       snapshot.docs.forEach((doc) => {
         const user = doc.id as User;
         const data = doc.data();
+        const lastSeen = data.lastSeen?.toDate() || new Date();
+        
+        // Consider user offline if last seen is more than 2 minutes ago
+        const isRecentlyActive = (new Date().getTime() - lastSeen.getTime()) < 120000; // 2 minutes
+        
         newStatuses[user] = {
-          lastSeen: data.lastSeen?.toDate() || new Date(),
-          isOnline: data.isOnline || false,
+          lastSeen,
+          isOnline: data.isOnline && isRecentlyActive,
           isTyping: data.isTyping || false
         };
       });
       
       setUserStatuses(newStatuses);
+    }, (error) => {
+      console.error('Error listening to status updates:', error);
     });
 
     return () => {
+      // Cleanup
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       unsubscribeStatus();
       
-      // Clear timeouts
+      // Clear intervals and timeouts
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
       if (statusUpdateTimeoutRef.current) {
         clearTimeout(statusUpdateTimeoutRef.current);
       }
@@ -137,16 +208,19 @@ export const useChat = (currentUser: User) => {
       }
 
       // Final offline status update
+      isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: false,
         isTyping: false
-      }, { merge: true });
+      }, { merge: true }).catch(() => {
+        // Ignore errors during cleanup
+      });
     };
-  }, [currentUser, debouncedStatusUpdate]);
+  }, [currentUser, updateStatusImmediately, sendHeartbeat]);
 
-  // Simplified typing indicator
+  // Improved typing indicator with faster response
   const setTypingStatus = useCallback(async (isTyping: boolean) => {
     // Clear any existing timeout
     if (typingTimeoutRef.current) {
@@ -157,13 +231,13 @@ export const useChat = (currentUser: User) => {
       const userStatusRef = doc(db, 'status', currentUser);
       
       if (isTyping) {
-        // Only update if not already typing to reduce writes
+        // Immediately update typing status
         if (!isTypingRef.current) {
           await updateDoc(userStatusRef, { isTyping: true });
           isTypingRef.current = true;
         }
         
-        // Auto-clear typing status after 3 seconds
+        // Auto-clear typing status after 2 seconds (reduced from 3)
         typingTimeoutRef.current = setTimeout(async () => {
           try {
             await updateDoc(userStatusRef, { isTyping: false });
@@ -171,7 +245,7 @@ export const useChat = (currentUser: User) => {
           } catch (error) {
             console.error('Error clearing typing status:', error);
           }
-        }, 3000);
+        }, 2000);
       } else {
         // Immediately clear typing status
         if (isTypingRef.current) {
@@ -222,15 +296,18 @@ export const useChat = (currentUser: User) => {
           pendingMessagesToMarkReadRef.current.add(message.id);
         });
 
-        // Debounce batch read updates
+        // Faster batch read updates (reduced from 1000ms to 500ms)
         if (markReadTimeoutRef.current) {
           clearTimeout(markReadTimeoutRef.current);
         }
         
         markReadTimeoutRef.current = setTimeout(() => {
           batchMarkMessagesAsRead();
-        }, 1000);
+        }, 500);
       }
+    }, (error) => {
+      console.error('Error listening to messages:', error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
