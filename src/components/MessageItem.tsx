@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Message, User, ReactionType } from '../types';
 import { format } from 'date-fns';
-import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Sparkles } from 'lucide-react';
+import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus } from 'lucide-react';
 
 interface MessageItemProps {
   message: Message;
@@ -113,7 +113,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <div 
       ref={messageRef}
-      className="group flex flex-col animate-fade-in"
+      className="group flex flex-col mb-4"
       onClick={() => {
         setShowMenu(false);
         setShowReactions(false);
@@ -121,212 +121,157 @@ const MessageItem: React.FC<MessageItemProps> = ({
       data-message-id={message.id}
     >
       <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-        <div className={`
-          relative max-w-[85%] sm:max-w-[75%] transition-all duration-300 hover:scale-[1.02]
-          ${isOwnMessage ? 'ml-auto' : 'mr-auto'}
-        `}>
-          {/* Message bubble */}
-          <div className={`
-            glass-message rounded-3xl px-4 py-3 shadow-lg
+        <div 
+          className={`
+            relative max-w-[85%] sm:max-w-[75%] px-3 py-2 sm:px-4 sm:py-2 rounded-2xl
             ${isOwnMessage 
-              ? 'rounded-tr-lg bg-gradient-to-br from-purple-500/20 to-violet-600/20 border-purple-400/20' 
-              : 'rounded-tl-lg bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-400/20'
+              ? 'bg-violet-700 text-white rounded-tr-none' 
+              : 'bg-blue-700 text-white rounded-tl-none'
             }
-            ${message.reaction ? 'mb-2' : ''}
-          `}>
-            {/* Reply indicator */}
-            {message.replyTo && (
-              <div 
-                className="glass-dark rounded-2xl p-3 mb-3 border-l-4 border-white/20 cursor-pointer hover:bg-white/5 transition-colors group/reply"
-                onClick={handleReplyClick}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Reply size={12} className="text-white/60" />
-                  <span className="text-xs font-medium text-white/70">{message.replyTo.sender}</span>
-                </div>
-                <p className="text-sm text-white/80 truncate">{message.replyTo.text}</p>
-              </div>
-            )}
-
-            {/* Message content */}
-            <div className="flex flex-col">
+          `}
+        >
+          {message.replyTo && (
+            <div 
+              className="text-xs bg-gray-700/50 p-2 rounded mb-2 border-l-2 border-gray-500 cursor-pointer hover:bg-gray-700/70 transition-colors"
+              onClick={handleReplyClick}
+            >
+              <div className="text-gray-400 truncate">{message.replyTo.sender}</div>
+              <div className="truncate max-w-full">{message.replyTo.text}</div>
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className="text-sm font-medium flex items-center gap-2">
               {message.edited && (
-                <div className="flex items-center gap-1 mb-1">
-                  <Sparkles size={12} className="text-white/50" />
-                  <span className="text-xs text-white/50 font-medium">edited</span>
-                </div>
+                <span className="text-xs text-gray-300">(edited)</span>
               )}
-              
-              {message.voiceUrl ? (
-                <button
-                  onClick={handleVoicePlay}
-                  className="flex items-center gap-3 py-2 px-3 glass-button rounded-2xl hover:scale-105 transition-all duration-200 group/voice"
-                >
-                  <div className={`
-                    w-10 h-10 rounded-full flex items-center justify-center
-                    ${isPlaying 
-                      ? 'bg-gradient-to-r from-red-500 to-pink-500' 
-                      : 'bg-gradient-to-r from-purple-500 to-violet-600'
-                    }
-                  `}>
-                    {isPlaying ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white ml-0.5" />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mic size={16} className="text-white/80" />
-                    <span className="text-sm font-medium text-white/90">Voice Message</span>
-                  </div>
-                </button>
-              ) : isEditing ? (
-                <div className="space-y-3">
-                  <textarea
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    className="w-full glass-input rounded-2xl px-3 py-2 text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-400/50"
-                    rows={2}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey && editText.trim()) {
-                        e.preventDefault();
-                        handleEdit();
-                      }
-                      if (e.key === 'Escape') setIsEditing(false);
-                    }}
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="glass-button rounded-xl px-3 py-1.5 text-sm text-white/70 hover:text-white transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleEdit}
-                      disabled={!editText.trim()}
-                      className={`
-                        rounded-xl px-3 py-1.5 text-sm font-medium transition-all
-                        ${editText.trim()
-                          ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:scale-105'
-                          : 'glass-button text-white/40 cursor-not-allowed'
-                        }
-                      `}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-white/95 break-words whitespace-pre-wrap leading-relaxed">
-                  {message.text}
-                </p>
-              )}
-
-              {/* Message footer */}
-              <div className="flex items-center justify-between mt-2 gap-2">
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!isOwnMessage && (
-                    <button
-                      onClick={handleReply}
-                      className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
-                    >
-                      <Reply size={14} />
-                    </button>
-                  )}
-                  
-                  <button
-                    onClick={toggleReactions}
-                    className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
-                  >
-                    <SmilePlus size={14} />
-                  </button>
-                  
-                  {isOwnMessage && (
-                    <button
-                      onClick={toggleMenu}
-                      className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
-                    >
-                      <MoreVertical size={14} />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/60 font-medium">
-                    {format(message.timestamp, 'h:mm a')}
-                  </span>
-                  {isOwnMessage && (
-                    <div className="flex items-center">
-                      {message.read ? (
-                        <CheckCheck size={14} className="text-green-400" />
-                      ) : (
-                        <Check size={14} className="text-white/60" />
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Reaction */}
-          {message.reaction && (
-            <div className="flex justify-end mt-1">
-              <div className="glass-dark rounded-full px-3 py-1 border border-white/10">
-                <span className="text-lg">{message.reaction}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Menu dropdown */}
-          {showMenu && (
-            <div className={`
-              absolute top-full ${isOwnMessage ? 'right-0' : 'left-0'} mt-2 z-20
-              glass-dark rounded-2xl shadow-2xl py-2 min-w-[140px] border border-white/10
-              animate-fade-in
-            `}>
+            </span>
+            
+            {message.voiceUrl ? (
               <button
-                onClick={startEditing}
-                className="flex items-center gap-3 w-full px-4 py-2 text-left text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                onClick={handleVoicePlay}
+                className="flex items-center gap-2 mt-1 text-sm hover:text-violet-300"
               >
-                <Edit2 size={16} />
-                Edit
+                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                <Mic size={16} />
+                Voice Message
               </button>
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-3 w-full px-4 py-2 text-left text-sm text-white/80 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 size={16} />
-                Delete
-              </button>
-            </div>
-          )}
-
-          {/* Reactions picker */}
-          {showReactions && (
-            <div className={`
-              absolute top-full ${isOwnMessage ? 'right-0' : 'left-0'} mt-2 z-20
-              glass-dark rounded-2xl shadow-2xl p-3 border border-white/10
-              animate-fade-in
-            `}>
-              <div className="flex gap-2">
-                {REACTIONS.map((emoji) => (
+            ) : isEditing ? (
+              <div className="mt-1">
+                <input
+                  type="text"
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded px-2 py-1 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && editText.trim()) handleEdit();
+                    if (e.key === 'Escape') setIsEditing(false);
+                  }}
+                  autoFocus
+                />
+                <div className="flex justify-end mt-2">
                   <button
-                    key={emoji}
-                    onClick={() => handleReaction(emoji)}
+                    onClick={handleEdit}
+                    disabled={!editText.trim()}
                     className={`
-                      w-10 h-10 rounded-xl flex items-center justify-center text-lg
-                      transition-all duration-200 hover:scale-125
-                      ${message.reaction === emoji 
-                        ? 'bg-white/20 scale-110' 
-                        : 'hover:bg-white/10'
+                      px-3 py-1 rounded text-sm
+                      ${editText.trim()
+                        ? 'bg-violet-600 hover:bg-violet-500 text-white'
+                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                       }
                     `}
                   >
-                    {emoji}
+                    Save
                   </button>
-                ))}
+                </div>
               </div>
+            ) : (
+              <p className="mt-1 break-words whitespace-pre-wrap sm:text-base">{message.text}</p>
+            )}
+
+          
+            <div className="flex items-center justify-end mt-1 space-x-1">
+              {isOwnMessage && (
+                <div className="relative">
+                  <button
+                    onClick={toggleMenu}
+                    className="text-gray-300 hover:text-white transition-colors duration-200 p-1"
+                  >
+                    <MoreVertical size={14} />
+                  </button>
+                  {showMenu && (
+                    <div className="absolute bottom-full right-0 mb-1 bg-gray-800 rounded-lg shadow-lg py-1 min-w-[120px] z-10">
+                      <button
+                        onClick={startEditing}
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+                      >
+                        <Edit2 size={14} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 text-gray-300 hover:text-white"
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="relative">
+                <button
+                  onClick={toggleReactions}
+                  className="text-gray-300 hover:text-violet-300 transition-colors duration-200"
+                >
+                  <SmilePlus size={14} />
+                </button>
+                {showReactions && (
+                  <div className={`
+                    absolute bottom-full ${isOwnMessage ? 'right-0' : '-left-2'} mb-1
+                    bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg py-1.5 px-2 flex gap-1.5 z-10
+                    border border-gray-700/50 max-w-[calc(100vw-2rem)] overflow-x-auto
+                    scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent
+                  `}>
+                    {REACTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReaction(emoji)}
+                        className={`
+                          text-base hover:scale-125 transition-transform duration-200 shrink-0
+                          ${message.reaction === emoji ? 'opacity-50' : 'opacity-100'}
+                        `}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleReply}
+                className="text-gray-300 hover:text-violet-300 transition-colors duration-200"
+              >
+                <Reply size={14} />
+              </button>
+              <span className="text-xs text-gray-300">
+                {format(message.timestamp, 'h:mm a')}
+              </span>
+              {isOwnMessage && (
+                message.read ? (
+                  <CheckCheck size={14} className="text-violet-300" />
+                ) : (
+                  <Check size={14} className="text-gray-300" />
+                )
+              )}
             </div>
-          )}
+            
+            {message.reaction && typeof message.reaction === 'string' && (
+              <div className="inline-flex relative top-5 -mt-3 items-center px-1.5 py-0.5 rounded-full text-sm w-fit bg-[#262626] border-2 border-[black]">
+                {message.reaction}
+              </div>
+            )}
+          </div>
+          
         </div>
       </div>
     </div>
