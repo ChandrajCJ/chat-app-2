@@ -38,32 +38,38 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-900 safe-area-bottom">
-      <ChatHeader 
-        currentUser={currentUser} 
-        userStatuses={userStatuses}
-        onDeleteAll={deleteAllMessages}
-      />
+    <div className="flex flex-col h-[100dvh] relative">
+      {/* Background overlay */}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
       
-      <MessageList 
-        messages={messages} 
-        currentUser={currentUser}
-        loading={loading}
-        isOtherUserTyping={isOtherUserTyping}
-        onReply={handleReply}
-        onEdit={editMessage}
-        onDelete={deleteMessage}
-        onReact={reactToMessage}
-        onRemoveReaction={removeReaction}
-      />
-      
-      <MessageInput 
-        onSendMessage={handleSendMessage}
-        onSendVoice={sendVoiceMessage}
-        replyingTo={replyingTo}
-        onCancelReply={() => setReplyingTo(undefined)}
-        onTyping={setTypingStatus}
-      />
+      {/* Main chat container */}
+      <div className="relative z-10 flex flex-col h-full">
+        <ChatHeader 
+          currentUser={currentUser} 
+          userStatuses={userStatuses}
+          onDeleteAll={deleteAllMessages}
+        />
+        
+        <MessageList 
+          messages={messages} 
+          currentUser={currentUser}
+          loading={loading}
+          isOtherUserTyping={isOtherUserTyping}
+          onReply={handleReply}
+          onEdit={editMessage}
+          onDelete={deleteMessage}
+          onReact={reactToMessage}
+          onRemoveReaction={removeReaction}
+        />
+        
+        <MessageInput 
+          onSendMessage={handleSendMessage}
+          onSendVoice={sendVoiceMessage}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(undefined)}
+          onTyping={setTypingStatus}
+        />
+      </div>
     </div>
   );
 };

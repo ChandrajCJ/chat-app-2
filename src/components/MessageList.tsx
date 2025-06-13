@@ -31,7 +31,6 @@ const MessageList: React.FC<MessageListProps> = ({
   const prevMessagesLengthRef = useRef(messages.length);
 
   useEffect(() => {
-    // Only scroll to bottom when new messages are added
     if (messages.length > prevMessagesLengthRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -50,23 +49,43 @@ const MessageList: React.FC<MessageListProps> = ({
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-pulse flex space-x-2">
-          <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
-          <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
-          <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1">
+              <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-bounce"></div>
+              <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+            <span className="text-white/70 font-medium">Loading messages...</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-4">
+    <div 
+      ref={containerRef} 
+      className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide"
+      style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}
+    >
       {messages.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-gray-500">
-          No messages yet. Start the conversation!
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="glass rounded-3xl p-8 max-w-sm mx-auto">
+              <div className="w-16 h-16 rounded-2xl glass-button mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl">💬</span>
+              </div>
+              <h3 className="text-white/90 font-semibold text-lg mb-2">No messages yet</h3>
+              <p className="text-white/60 text-sm">Start the conversation with your first message!</p>
+            </div>
+          </div>
         </div>
       ) : (
-        <>
+        <div className="space-y-4">
           {messages.map((message) => (
             <MessageItem 
               key={message.id} 
@@ -81,7 +100,7 @@ const MessageList: React.FC<MessageListProps> = ({
             />
           ))}
           {isOtherUserTyping && <TypingIndicator />}
-        </>
+        </div>
       )}
       <div ref={messagesEndRef} />
     </div>
