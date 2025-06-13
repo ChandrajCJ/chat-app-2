@@ -96,4 +96,9 @@
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Ensure high z-index elements are properly layered */
+  .z-\[100\] {
+    z-index: 100;
+  }
 }
