@@ -68,17 +68,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this message?')) {
-      onDelete(message.id);
-    }
+    onDelete(message.id);
     setShowMenu(false);
   };
 
   const handleReply = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     onReply(message);
-    setShowMenu(false);
-    setShowReactions(false);
   };
 
   const toggleMenu = (e: React.MouseEvent | React.TouchEvent) => {
@@ -113,28 +109,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
       scrollToMessage(message.replyTo.id);
     }
   };
-
-  // Close menus when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (messageRef.current && !messageRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-        setShowReactions(false);
-      }
-    };
-
-    if (showMenu || showReactions) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showMenu, showReactions]);
   
   return (
     <div 
       ref={messageRef}
-      className={`group flex flex-col animate-fade-in relative ${
-        showMenu || showReactions ? 'z-50' : 'z-10'
-      }`}
+      className="group flex flex-col animate-fade-in"
+      onClick={() => {
+        setShowMenu(false);
+        setShowReactions(false);
+      }}
       data-message-id={message.id}
     >
       <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
@@ -144,7 +127,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         `}>
           {/* Message bubble */}
           <div className={`
-            glass-message rounded-3xl px-4 py-3 shadow-lg relative
+            glass-message rounded-3xl px-4 py-3 shadow-lg
             ${isOwnMessage 
               ? 'rounded-tr-lg bg-gradient-to-br from-purple-500/20 to-violet-600/20 border-purple-400/20' 
               : 'rounded-tl-lg bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-400/20'
@@ -240,18 +223,18 @@ const MessageItem: React.FC<MessageItemProps> = ({
               {/* Message footer */}
               <div className="flex items-center justify-between mt-2 gap-2">
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={handleReply}
-                    className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
-                    title="Reply"
-                  >
-                    <Reply size={14} />
-                  </button>
+                  {!isOwnMessage && (
+                    <button
+                      onClick={handleReply}
+                      className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
+                    >
+                      <Reply size={14} />
+                    </button>
+                  )}
                   
                   <button
                     onClick={toggleReactions}
                     className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
-                    title="Add reaction"
                   >
                     <SmilePlus size={14} />
                   </button>
@@ -260,7 +243,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     <button
                       onClick={toggleMenu}
                       className="glass-button rounded-full p-1.5 text-white/60 hover:text-white hover:scale-110 transition-all duration-200"
-                      title="More options"
                     >
                       <MoreVertical size={14} />
                     </button>
@@ -294,20 +276,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           )}
 
-          {/* Menu dropdown - Fixed positioning and z-index */}
+          {/* Menu dropdown */}
           {showMenu && (
             <div className={`
-              fixed z-[100] mt-2 min-w-[140px]
-              glass-dark rounded-2xl shadow-2xl py-2 border border-white/10
+              absolute top-full ${isOwnMessage ? 'right-0' : 'left-0'} mt-2 z-20
+              glass-dark rounded-2xl shadow-2xl py-2 min-w-[140px] border border-white/10
               animate-fade-in
-            `}
-            style={{
-              top: messageRef.current ? 
-                messageRef.current.getBoundingClientRect().bottom + window.scrollY + 8 : 0,
-              left: isOwnMessage ? 
-                (messageRef.current ? messageRef.current.getBoundingClientRect().right - 140 : 0) :
-                (messageRef.current ? messageRef.current.getBoundingClientRect().left : 0)
-            }}>
+            `}>
               <button
                 onClick={startEditing}
                 className="flex items-center gap-3 w-full px-4 py-2 text-left text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
@@ -325,20 +300,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           )}
 
-          {/* Reactions picker - Fixed positioning and z-index */}
+          {/* Reactions picker */}
           {showReactions && (
             <div className={`
-              fixed z-[100] mt-2
+              absolute top-full ${isOwnMessage ? 'right-0' : 'left-0'} mt-2 z-20
               glass-dark rounded-2xl shadow-2xl p-3 border border-white/10
               animate-fade-in
-            `}
-            style={{
-              top: messageRef.current ? 
-                messageRef.current.getBoundingClientRect().bottom + window.scrollY + 8 : 0,
-              left: isOwnMessage ? 
-                (messageRef.current ? messageRef.current.getBoundingClientRect().right - 200 : 0) :
-                (messageRef.current ? messageRef.current.getBoundingClientRect().left : 0)
-            }}>
+            `}>
               <div className="flex gap-2">
                 {REACTIONS.map((emoji) => (
                   <button
