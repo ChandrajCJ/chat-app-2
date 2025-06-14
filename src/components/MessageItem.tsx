@@ -34,6 +34,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const isOwnMessage = message.sender === currentUser;
   const messageRef = useRef<HTMLDivElement>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleEdit = () => {
     if (editText.trim() && editText !== message.text) {
@@ -102,6 +103,36 @@ const MessageItem: React.FC<MessageItemProps> = ({
     e.stopPropagation();
     setIsEditing(true);
     setShowMenu(false);
+    // Focus the textarea after it's rendered
+    setTimeout(() => {
+      if (editTextareaRef.current) {
+        editTextareaRef.current.focus();
+        // Auto-resize the textarea
+        editTextareaRef.current.style.height = 'auto';
+        editTextareaRef.current.style.height = editTextareaRef.current.scrollHeight + 'px';
+      }
+    }, 0);
+  };
+
+  const handleEditTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    setEditText(textarea.value);
+    
+    // Auto-resize textarea
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (editText.trim()) {
+        handleEdit();
+      }
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditText(message.text); // Reset to original text
+    }
   };
 
   const handleReplyClick = () => {
@@ -157,23 +188,30 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </button>
             ) : isEditing ? (
               <div className="mt-1">
-                <input
-                  type="text"
+                <textarea
+                  ref={editTextareaRef}
                   value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="w-full bg-gray-700 text-white rounded px-2 py-1 text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && editText.trim()) handleEdit();
-                    if (e.key === 'Escape') setIsEditing(false);
-                  }}
-                  autoFocus
+                  onChange={handleEditTextChange}
+                  onKeyDown={handleEditKeyDown}
+                  className="w-full bg-gray-700 text-white rounded px-2 py-1 text-sm resize-none min-h-[2.5rem] max-h-[200px] focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                  placeholder="Edit your message..."
+                  rows={1}
                 />
-                <div className="flex justify-end mt-2">
+                <div className="flex justify-end gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditText(message.text);
+                    }}
+                    className="px-3 py-1 rounded text-sm bg-gray-600 hover:bg-gray-500 text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
                   <button
                     onClick={handleEdit}
                     disabled={!editText.trim()}
                     className={`
-                      px-3 py-1 rounded text-sm
+                      px-3 py-1 rounded text-sm transition-colors
                       ${editText.trim()
                         ? 'bg-violet-600 hover:bg-violet-500 text-white'
                         : 'bg-gray-600 text-gray-400 cursor-not-allowed'
