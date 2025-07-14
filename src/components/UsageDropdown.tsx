@@ -138,7 +138,7 @@ const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
             </div>
 
             {/* Firebase Console Note */}
-            <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+            {/* <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
               <div className="flex items-center gap-2 mb-1">
                 <Database className="w-4 h-4 text-blue-400" />
                 <span className="text-sm font-medium text-blue-300">Console Data</span>
@@ -146,8 +146,7 @@ const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
               <p className="text-xs text-blue-200/80">
                 Values start from your current Firebase console usage and increment with app activity.
               </p>
-            </div>
-
+            </div> */}
             {/* Last Updated */}
             <div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-700/50">
               Last updated: {format(usage.lastUpdated, 'MMM d, h:mm:ss a')}
