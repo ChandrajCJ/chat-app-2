@@ -144,7 +144,7 @@ const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
                 <span className="text-sm font-medium text-blue-300">Firebase Console Sync</span>
               </div>
               <p className="text-xs text-blue-200/80">
-                Reads: 384 | Writes: 139 | Deletes: 0 (Last 24h from Firebase Console)
+                Reads: 0 | Writes: 00 | Deletes: 0 (Last 24h from Firebase Console)
               </p>
             </div>
             {/* Last Updated */}
