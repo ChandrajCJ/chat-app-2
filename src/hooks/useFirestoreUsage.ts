@@ -11,16 +11,16 @@ interface UsageStats {
 
 export const useFirestoreUsage = () => {
   const [usage, setUsage] = useState<UsageStats>({
-    reads: 384, // Your exact Firebase console reads
-    writes: 139, // Your exact Firebase console writes
+    reads: 0, // Your exact Firebase console reads
+    writes: 0, // Your exact Firebase console writes
     deletes: 0, // Your exact Firebase console deletes
     lastUpdated: new Date()
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let totalReads = 384; // Starting with your exact Firebase console values
-    let totalWrites = 139;
+    let totalReads = 0; // Starting with your exact Firebase console values
+    let totalWrites = 0;
     let totalDeletes = 0;
 
     // Create a function to estimate usage based on operations
@@ -91,8 +91,8 @@ export const useFirestoreUsage = () => {
     try {
       // Reset to your current Firebase console values
       setUsage({
-        reads: 384, // Your exact Firebase console reads
-        writes: 139, // Your exact Firebase console writes
+        reads: 0, // Your exact Firebase console reads
+        writes: 0, // Your exact Firebase console writes
         deletes: 0, // Your exact Firebase console deletes
         lastUpdated: new Date()
       });
@@ -104,8 +104,8 @@ export const useFirestoreUsage = () => {
   const resetUsage = () => {
     // Reset to your exact Firebase console values
     setUsage({
-      reads: 384,
-      writes: 139,
+      reads: 0,
+      writes: 0,
       deletes: 0,
       lastUpdated: new Date()
     });
