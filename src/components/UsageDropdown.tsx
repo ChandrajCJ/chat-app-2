@@ -9,7 +9,7 @@ interface UsageDropdownProps {
 }
 
 const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
-  const { usage, loading, resetUsage } = useFirestoreUsage();
+  const { usage, loading, resetUsage, syncWithFirebaseUsage } = useFirestoreUsage();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,15 +51,24 @@ const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5 text-violet-400" />
-            <h3 className="text-lg font-semibold text-white">Firestore Usage</h3>
+            <h3 className="text-lg font-semibold text-white">Firebase Usage</h3>
           </div>
-          <button
-            onClick={resetUsage}
-            className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
-            title="Reset counters"
-          >
-            <RefreshCw size={16} />
-          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={syncWithFirebaseUsage}
+              className="p-1.5 text-gray-400 hover:text-violet-400 transition-colors rounded-md hover:bg-gray-700/50"
+              title="Sync with Firebase console"
+            >
+              <Database size={16} />
+            </button>
+            <button
+              onClick={resetUsage}
+              className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
+              title="Reset to current values"
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -111,7 +120,7 @@ const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
 
             {/* Usage Breakdown */}
             <div className="bg-gray-700/30 rounded-lg p-3">
-              <h4 className="text-sm font-medium text-gray-300 mb-2">Usage Breakdown</h4>
+              <h4 className="text-sm font-medium text-gray-300 mb-2">Operation Distribution</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400">Reads</span>
@@ -126,6 +135,17 @@ const UsageDropdown: React.FC<UsageDropdownProps> = ({ isOpen, onToggle }) => {
                   <span className="text-red-400">{totalOperations > 0 ? ((usage.deletes / totalOperations) * 100).toFixed(1) : 0}%</span>
                 </div>
               </div>
+            </div>
+
+            {/* Firebase Console Note */}
+            <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+              <div className="flex items-center gap-2 mb-1">
+                <Database className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-blue-300">Console Data</span>
+              </div>
+              <p className="text-xs text-blue-200/80">
+                Values start from your current Firebase console usage and increment with app activity.
+              </p>
             </div>
 
             {/* Last Updated */}
