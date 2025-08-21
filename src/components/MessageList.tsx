@@ -66,6 +66,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
           No messages yet. Start the conversation!
         </div>
+        </div>
       ) : (
         <>
           {messages.map((message) => (
