@@ -51,9 +51,9 @@ const MessageList: React.FC<MessageListProps> = ({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="animate-pulse flex space-x-2">
-          <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
-          <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
-          <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
+          <div className="h-3 w-3 bg-violet-500 dark:bg-violet-400 rounded-full"></div>
+          <div className="h-3 w-3 bg-violet-500 dark:bg-violet-400 rounded-full"></div>
+          <div className="h-3 w-3 bg-violet-500 dark:bg-violet-400 rounded-full"></div>
         </div>
       </div>
     );
@@ -63,6 +63,7 @@ const MessageList: React.FC<MessageListProps> = ({
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-4">
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-500">
+        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
           No messages yet. Start the conversation!
         </div>
       ) : (

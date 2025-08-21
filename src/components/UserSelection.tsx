@@ -62,13 +62,13 @@ const UserSelection: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-900 text-white p-4 safe-area-top safe-area-bottom">
+    <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 safe-area-top safe-area-bottom transition-colors duration-300">
       <div className="w-full max-w-xs flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-violet-600/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-violet-500" />
+          <div className="w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-violet-600 dark:text-violet-400" />
           </div>
-          <h2 className="text-xl font-medium text-gray-200">Enter the PIN my love</h2>
+          <h2 className="text-xl font-medium text-gray-800 dark:text-gray-200">Enter the PIN my love</h2>
         </div>
 
         <div className="relative">
@@ -90,20 +90,21 @@ const UserSelection: React.FC = () => {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   className={`
                     w-14 h-14 sm:w-16 sm:h-16 text-2xl text-center
-                    bg-gray-800/50 backdrop-blur-sm
+                    bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm
                     rounded-2xl
                     transition-all duration-300
                     ${error 
-                      ? 'border-2 border-red-500/50 animate-shake' 
-                      : 'border-2 border-gray-700/50 group-hover:border-gray-600/50 focus:border-violet-500/50'
+                      ? 'border-2 border-error-500/50 animate-shake' 
+                      : 'border-2 border-gray-300 dark:border-gray-700/50 group-hover:border-gray-400 dark:group-hover:border-gray-600/50 focus:border-violet-500 dark:focus:border-violet-400'
                     }
-                    focus:outline-none focus:ring-2 focus:ring-violet-500/20
+                    focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:focus:ring-violet-400/20
+                    text-gray-900 dark:text-gray-100 shadow-lg
                   `}
                 />
                 <div className={`
                   absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full
                   transition-all duration-300
-                  ${digit ? 'bg-violet-500' : 'bg-gray-700'}
+                  ${digit ? 'bg-violet-500 dark:bg-violet-400' : 'bg-gray-300 dark:bg-gray-700'}
                 `} />
               </div>
             ))}
@@ -112,6 +113,7 @@ const UserSelection: React.FC = () => {
           {error && (
             <div className="absolute -bottom-8 left-0 right-0 text-center">
               <p className="text-red-500 text-sm animate-fade-in">
+              <p className="text-error-500 text-sm animate-fade-in">
                 Invalid PIN
               </p>
             </div>

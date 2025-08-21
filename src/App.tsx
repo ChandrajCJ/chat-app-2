@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import UserSelection from './components/UserSelection';
 import ChatContainer from './components/ChatContainer';
 
@@ -7,7 +8,7 @@ const ChatApp: React.FC = () => {
   const { currentUser } = useUser();
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {currentUser ? (
         <ChatContainer currentUser={currentUser} />
       ) : (
@@ -19,9 +20,11 @@ const ChatApp: React.FC = () => {
 
 function App() {
   return (
-    <UserProvider>
-      <ChatApp />
-    </UserProvider>
+    <ThemeProvider>
+      <UserProvider>
+        <ChatApp />
+      </UserProvider>
+    </ThemeProvider>
   );
 }
 
