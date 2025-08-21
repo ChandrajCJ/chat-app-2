@@ -28,11 +28,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
   };
 
   return (
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
+    <div className="bg-gray-50/90 dark:bg-gray-900/80 backdrop-blur-md p-4 flex items-center justify-between border-b border-gray-300/50 dark:border-gray-800 transition-colors duration-300">
       <div className="flex items-center">
         <button 
           onClick={handleBack}
-          className="mr-2 sm:mr-3 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200"
+          className="mr-2 sm:mr-3 p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
         >
           <ArrowLeft size={20} />
         </button>
@@ -49,8 +49,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
             `}></span>
           </div>
           <div>
-            <h2 className="font-semibold text-xl sm:text-2xl text-gray-900 dark:text-gray-100">{otherUser}</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+            <h2 className="font-semibold text-xl sm:text-2xl text-gray-700 dark:text-gray-100">{otherUser}</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-400 line-clamp-1">
               {otherUserStatus.isOnline 
                 ? 'Online'
                 : `Last seen ${formatDistanceToNow(otherUserStatus.lastSeen, { addSuffix: true })}`
@@ -63,14 +63,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
       <div className="flex items-center gap-2">
         <button
           onClick={toggleTheme}
-          className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200"
+          className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
         >
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
         <button
           onClick={handleDeleteAll}
-          className="p-2 text-gray-500 dark:text-gray-400 hover:text-error-500 transition-colors duration-200"
+          className="p-2 text-gray-400 dark:text-gray-400 hover:text-error-500 transition-colors duration-200"
           title="Delete all messages"
         >
           <Trash2 size={20} />

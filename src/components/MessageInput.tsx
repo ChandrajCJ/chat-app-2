@@ -160,16 +160,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 transition-colors duration-300">
+    <div className="bg-gray-50/90 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-300/50 dark:border-gray-800 p-3 sm:p-4 transition-colors duration-300">
       {replyingTo && (
-        <div className="flex items-center justify-between bg-gray-200/50 dark:bg-gray-700/50 p-2 rounded mb-2">
+        <div className="flex items-center justify-between bg-gray-200/60 dark:bg-gray-700/50 p-2 rounded mb-2">
           <div className="flex-1 min-w-0">
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{replyingTo.sender}</div>
-            <div className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-full">{replyingTo.text}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-400 truncate">{replyingTo.sender}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-full">{replyingTo.text}</div>
           </div>
           <button 
             onClick={onCancelReply}
-            className="ml-2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 shrink-0 transition-colors duration-200"
+            className="ml-2 p-1 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0 transition-colors duration-200"
           >
             <X size={16} />
           </button>
@@ -182,7 +182,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:focus:ring-violet-400 min-w-0 max-h-[150px] resize-none border border-gray-200 dark:border-gray-700 transition-colors duration-200"
+          className="flex-1 bg-gray-200/60 dark:bg-gray-800 text-gray-700 dark:text-gray-100 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-400/50 dark:focus:ring-violet-400 min-w-0 max-h-[150px] resize-none border border-gray-300/50 dark:border-gray-700 transition-colors duration-200 placeholder-gray-400 dark:placeholder-gray-500"
           disabled={isRecording}
           rows={1}
         />
@@ -204,7 +204,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <button
               type="button"
               onClick={startRecording}
-              className="rounded-full p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 shrink-0"
+              className="rounded-full p-2 bg-gray-300/60 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 shrink-0"
             >
               <Mic size={20} />
             </button>
@@ -215,7 +215,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 transition-all duration-200 shrink-0
                 ${message.trim() 
                   ? 'bg-violet-500 hover:bg-violet-600 dark:bg-violet-600 dark:hover:bg-violet-500 transform hover:scale-105' 
-                  : 'bg-violet-300 dark:bg-violet-800 pointer-events-none'
+                  : 'bg-violet-300/60 dark:bg-violet-800 pointer-events-none'
                 }
               `}
             >

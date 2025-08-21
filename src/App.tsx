@@ -8,7 +8,7 @@ const ChatApp: React.FC = () => {
   const { currentUser } = useUser();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 text-gray-700 dark:text-gray-100 transition-colors duration-300">
       {currentUser ? (
         <ChatContainer currentUser={currentUser} />
       ) : (
