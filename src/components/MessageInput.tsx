@@ -162,7 +162,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   return (
     <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 transition-colors duration-300">
       {replyingTo && (
-        <div className="flex items-center justify-between bg-gray-700/50 p-2 rounded mb-2">
         <div className="flex items-center justify-between bg-gray-200/50 dark:bg-gray-700/50 p-2 rounded mb-2">
           <div className="flex-1 min-w-0">
             <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{replyingTo.sender}</div>
