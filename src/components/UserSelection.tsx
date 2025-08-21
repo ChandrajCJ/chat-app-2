@@ -113,6 +113,7 @@ const UserSelection: React.FC = () => {
           {error && (
             <div className="absolute -bottom-8 left-0 right-0 text-center">
               <p className="text-red-500 text-sm animate-fade-in">
+              </p>
               <p className="text-error-500 text-sm animate-fade-in">
                 Invalid PIN
               </p>
