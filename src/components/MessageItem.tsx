@@ -240,14 +240,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     <div className="absolute bottom-full right-0 mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 min-w-[120px] z-10 border border-gray-200 dark:border-gray-700 animate-slide-in">
                       <button
                         onClick={startEditing}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
                       >
                         <Edit2 size={14} />
                         Edit
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
                       >
                         <Trash2 size={14} />
                         Delete
@@ -266,8 +266,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 {showReactions && (
                   <div className={`
                     absolute bottom-full ${isOwnMessage ? 'right-0' : '-left-2'} mb-1
-                    bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-xl py-1.5 px-2 flex gap-1.5 z-10
-                    border border-gray-200 dark:border-gray-700/50 max-w-[calc(100vw-2rem)] overflow-x-auto animate-slide-in
+                    bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-xl py-1.5 px-2 flex gap-1.5 z-10
+                    border border-gray-300/50 dark:border-gray-700/50 max-w-[calc(100vw-2rem)] overflow-x-auto animate-slide-in
                     scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent
                   `}>
                     {REACTIONS.map((emoji) => (
@@ -304,7 +304,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
             
             {message.reaction && typeof message.reaction === 'string' && (
-              <div className="inline-flex relative top-5 -mt-3 items-center px-1.5 py-0.5 rounded-full text-sm w-fit bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-900 shadow-md">
+              <div className="inline-flex relative top-5 -mt-3 items-center px-1.5 py-0.5 rounded-full text-sm w-fit bg-gray-50 dark:bg-gray-800 border-2 border-gray-200/60 dark:border-gray-900 shadow-md">
                 {message.reaction}
               </div>
             )}

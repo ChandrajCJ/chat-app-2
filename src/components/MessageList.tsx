@@ -63,7 +63,7 @@ const MessageList: React.FC<MessageListProps> = ({
     <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-4">
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-500">
-        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-400">
           No messages yet. Start the conversation!
         </div>
         </div>
