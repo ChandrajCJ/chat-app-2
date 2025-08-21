@@ -1,9 +1,8 @@
 import React from 'react';
 import { User, UserStatuses } from '../types';
-import { ArrowLeft, UserRound, Trash2, BarChart3 } from 'lucide-react';
+import { ArrowLeft, UserRound, Trash2 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { formatDistanceToNow } from 'date-fns';
-import UsageDropdown from './UsageDropdown';
 
 interface ChatHeaderProps {
   currentUser: User;
@@ -13,7 +12,6 @@ interface ChatHeaderProps {
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDeleteAll }) => {
   const { setUser } = useUser();
-  const [showUsageDropdown, setShowUsageDropdown] = React.useState(false);
   const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
   const otherUserStatus = userStatuses[otherUser];
   
@@ -25,10 +23,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
     if (window.confirm('Are you sure you want to delete all messages? This action cannot be undone.')) {
       onDeleteAll();
     }
-  };
-
-  const toggleUsageDropdown = () => {
-    setShowUsageDropdown(!showUsageDropdown);
   };
 
   return (
@@ -64,35 +58,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative">
-          <button
-            onClick={toggleUsageDropdown}
-            className={`
-              p-2 transition-colors duration-200
-              ${showUsageDropdown 
-                ? 'text-violet-400 bg-violet-500/10' 
-                : 'text-gray-400 hover:text-violet-400'
-              }
-            `}
-            title="View Firestore usage"
-          >
-            <BarChart3 size={20} />
-          </button>
-          <UsageDropdown 
-            isOpen={showUsageDropdown} 
-            onToggle={() => setShowUsageDropdown(false)} 
-          />
-        </div>
-        
-        <button
-          onClick={handleDeleteAll}
-          className="p-2 text-gray-400 hover:text-red-500 transition-colors duration-200"
-          title="Delete all messages"
-        >
-          <Trash2 size={20} />
-        </button>
-      </div>
+      <button
+        onClick={handleDeleteAll}
+        className="p-2 text-gray-400 hover:text-red-500 transition-colors duration-200"
+        title="Delete all messages"
+      >
+        <Trash2 size={20} />
+      </button>
     </div>
   );
 };
