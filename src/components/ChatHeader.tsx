@@ -3,6 +3,7 @@ import { User, UserStatuses } from '../types';
 import { ArrowLeft, UserRound, Trash2, Sun, Moon } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { useTheme } from '../contexts/ThemeContext';
+import ColorSchemeSelector from './ColorSchemeSelector';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ChatHeaderProps {
@@ -40,7 +41,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
         <div className="flex items-center">
           <div className={`
             p-2 rounded-full mr-2 sm:mr-3 relative
-            ${otherUser === '🐞' ? 'bg-violet-500 dark:bg-violet-600' : 'bg-blue-500 dark:bg-blue-600'}
+            ${otherUser === '🐞' ? 'bg-primary-500 dark:bg-primary-600' : 'bg-secondary-500 dark:bg-secondary-600'}
           `}>
             <UserRound size={20} className="text-white" />
             <span className={`
@@ -61,6 +62,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
       </div>
 
       <div className="flex items-center gap-2">
+        <ColorSchemeSelector />
         <button
           onClick={toggleTheme}
           className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"

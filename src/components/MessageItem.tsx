@@ -156,8 +156,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
           className={`
             relative max-w-[85%] sm:max-w-[75%] px-3 py-2 sm:px-4 sm:py-2 rounded-2xl
             ${isOwnMessage 
-              ? 'bg-violet-500 dark:bg-violet-600 text-white rounded-tr-none shadow-md' 
-              : 'bg-blue-500 dark:bg-blue-600 text-white rounded-tl-none shadow-md'
+              ? 'bg-primary-500 dark:bg-primary-600 text-white rounded-tr-none shadow-md' 
+              : 'bg-secondary-500 dark:bg-secondary-600 text-white rounded-tl-none shadow-md'
             }
           `}
         >

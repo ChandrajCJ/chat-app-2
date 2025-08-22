@@ -51,9 +51,9 @@ const MessageList: React.FC<MessageListProps> = ({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="animate-pulse flex space-x-2">
-          <div className="h-3 w-3 bg-violet-500 dark:bg-violet-400 rounded-full"></div>
-          <div className="h-3 w-3 bg-violet-500 dark:bg-violet-400 rounded-full"></div>
-          <div className="h-3 w-3 bg-violet-500 dark:bg-violet-400 rounded-full"></div>
+          <div className="h-3 w-3 bg-primary-500 dark:bg-primary-400 rounded-full"></div>
+          <div className="h-3 w-3 bg-primary-500 dark:bg-primary-400 rounded-full"></div>
+          <div className="h-3 w-3 bg-primary-500 dark:bg-primary-400 rounded-full"></div>
         </div>
       </div>
     );

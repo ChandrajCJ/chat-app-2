@@ -214,8 +214,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 rounded-full p-2 text-white focus:outline-none shadow-lg
                 transition-all duration-200 shrink-0
                 ${message.trim() 
-                  ? 'bg-violet-500 hover:bg-violet-600 dark:bg-violet-600 dark:hover:bg-violet-500 transform hover:scale-105' 
-                  : 'bg-violet-300/60 dark:bg-violet-800 pointer-events-none'
+                  ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 transform hover:scale-105' 
+                  : 'bg-primary-300/60 dark:bg-primary-800 pointer-events-none'
                 }
               `}
             >
