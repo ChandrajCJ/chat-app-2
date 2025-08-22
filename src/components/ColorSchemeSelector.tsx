@@ -9,39 +9,39 @@ const ColorSchemeSelector: React.FC = () => {
   const colorSchemes = [
     { 
       name: 'violet', 
-      label: 'Violet', 
-      colors: ['#8b5cf6', '#3b82f6'],
-      description: 'Classic purple & blue'
+      label: 'Magenta', 
+      colors: ['#d946ef', '#f97316'],
+      description: 'Vibrant magenta & orange'
     },
     { 
       name: 'blue', 
-      label: 'Blue', 
-      colors: ['#3b82f6', '#0ea5e9'],
-      description: 'Ocean blues'
+      label: 'Electric', 
+      colors: ['#3b82f6', '#ef4444'],
+      description: 'Electric blue & red'
     },
     { 
       name: 'emerald', 
-      label: 'Emerald', 
-      colors: ['#10b981', '#22c55e'],
-      description: 'Fresh greens'
+      label: 'Nature', 
+      colors: ['#10b981', '#f59e0b'],
+      description: 'Emerald green & amber'
     },
     { 
       name: 'rose', 
-      label: 'Rose', 
-      colors: ['#f43f5e', '#ec4899'],
-      description: 'Warm pinks'
+      label: 'Sunset', 
+      colors: ['#f43f5e', '#0ea5e9'],
+      description: 'Rose pink & sky blue'
     },
     { 
       name: 'amber', 
-      label: 'Amber', 
-      colors: ['#f59e0b', '#eab308'],
-      description: 'Golden yellows'
+      label: 'Royal', 
+      colors: ['#f59e0b', '#9333ea'],
+      description: 'Golden amber & purple'
     },
     { 
       name: 'indigo', 
-      label: 'Indigo', 
-      colors: ['#6366f1', '#64748b'],
-      description: 'Deep indigo & slate'
+      label: 'Forest', 
+      colors: ['#6366f1', '#22c55e'],
+      description: 'Deep indigo & green'
     },
   ] as const;
 
