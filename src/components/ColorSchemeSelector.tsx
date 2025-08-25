@@ -19,7 +19,7 @@ const ColorSchemeSelector: React.FC = () => {
     { 
       name: 'cool-blue', 
       label: 'Cool Blue & Gray', 
-      colors: ['#1E88E5', '#F1F3F4'],
+      colors: ['#3C5A4C', '#2E3F35'],
       description: 'Professional blue & gray'
     },
     { 
