@@ -61,7 +61,6 @@ const ColorSchemeSelector: React.FC = () => {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 min-w-[240px] z-20 animate-slide-in">
-          <div className="absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 min-w-[240px] z-50 animate-slide-in">
             <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
               Color Schemes
             </div>
