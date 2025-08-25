@@ -41,7 +41,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
         <div className="flex items-center">
           <div className={`
             p-2 rounded-full mr-2 sm:mr-3 relative
-            ${otherUser === '🐞' ? 'bg-primary-500 dark:bg-primary-600' : 'bg-secondary-500 dark:bg-secondary-600'}
+            bg-gray-400 dark:bg-gray-600
           `}>
             <UserRound size={20} className="text-white" />
             <span className={`

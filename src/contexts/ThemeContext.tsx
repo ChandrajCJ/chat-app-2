@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-type ColorScheme = 'violet' | 'blue' | 'emerald' | 'rose' | 'amber' | 'indigo';
+type ColorScheme = 'classic-calm' | 'cool-blue' | 'vibrant-violet' | 'muted-pastels' | 'minimal-dark';
 
 interface ThemeContextType {
   theme: Theme;
@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(() => {
     const saved = localStorage.getItem('colorScheme') as ColorScheme;
-    return saved || 'violet';
+    return saved || 'classic-calm';
   });
 
   useEffect(() => {
@@ -35,19 +35,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.classList.add(theme);
     
     // Update document class for color scheme
-    document.documentElement.classList.remove('violet', 'blue', 'emerald', 'rose', 'amber', 'indigo');
+    document.documentElement.classList.remove('classic-calm', 'cool-blue', 'vibrant-violet', 'muted-pastels', 'minimal-dark');
     document.documentElement.classList.add(colorScheme);
     
     // Update meta theme-color based on theme and color scheme
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       const colors = {
-        violet: theme === 'dark' ? '#1e1b4b' : '#f4f3ff',
-        blue: theme === 'dark' ? '#1e3a8a' : '#eff6ff',
-        emerald: theme === 'dark' ? '#064e3b' : '#ecfdf5',
-        rose: theme === 'dark' ? '#881337' : '#fff1f2',
-        amber: theme === 'dark' ? '#92400e' : '#fffbeb',
-        indigo: theme === 'dark' ? '#312e81' : '#eef2ff'
+        'classic-calm': theme === 'dark' ? '#2C2C2C' : '#DCF8C6',
+        'cool-blue': theme === 'dark' ? '#2E2E2E' : '#1E88E5',
+        'vibrant-violet': theme === 'dark' ? '#1F8A85' : '#7C4DFF',
+        'muted-pastels': theme === 'dark' ? '#4FC3F7' : '#FFECB3',
+        'minimal-dark': theme === 'dark' ? '#4F545C' : '#5865F2'
       };
       metaThemeColor.setAttribute('content', colors[colorScheme]);
     }

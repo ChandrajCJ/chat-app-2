@@ -8,40 +8,34 @@ const ColorSchemeSelector: React.FC = () => {
 
   const colorSchemes = [
     { 
-      name: 'violet', 
-      label: 'Magenta', 
-      colors: ['#d946ef', '#f97316'],
-      description: 'Vibrant magenta & orange'
+      name: 'classic-calm', 
+      label: 'Classic Calm', 
+      colors: ['#DCF8C6', '#FFFFFF'],
+      description: 'WhatsApp-style green & white'
     },
     { 
-      name: 'blue', 
-      label: 'Electric', 
-      colors: ['#3b82f6', '#ef4444'],
-      description: 'Electric blue & red'
+      name: 'cool-blue', 
+      label: 'Cool Blue & Gray', 
+      colors: ['#1E88E5', '#F1F3F4'],
+      description: 'Professional blue & gray'
     },
     { 
-      name: 'emerald', 
-      label: 'Nature', 
-      colors: ['#10b981', '#f59e0b'],
-      description: 'Emerald green & amber'
+      name: 'vibrant-violet', 
+      label: 'Vibrant Violet & Teal', 
+      colors: ['#7C4DFF', '#26A69A'],
+      description: 'Bold violet & teal contrast'
     },
     { 
-      name: 'rose', 
-      label: 'Sunset', 
-      colors: ['#f43f5e', '#0ea5e9'],
-      description: 'Rose pink & sky blue'
+      name: 'muted-pastels', 
+      label: 'Muted Pastels', 
+      colors: ['#FFECB3', '#B3E5FC'],
+      description: 'Soft amber & blue pastels'
     },
     { 
-      name: 'amber', 
-      label: 'Royal', 
-      colors: ['#f59e0b', '#9333ea'],
-      description: 'Golden amber & purple'
-    },
-    { 
-      name: 'indigo', 
-      label: 'Forest', 
-      colors: ['#6366f1', '#22c55e'],
-      description: 'Deep indigo & green'
+      name: 'minimal-dark', 
+      label: 'Minimal Dark-Neutral', 
+      colors: ['#5865F2', '#E3E5E8'],
+      description: 'Discord-style purple & gray'
     },
   ] as const;
 
@@ -67,6 +61,7 @@ const ColorSchemeSelector: React.FC = () => {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 min-w-[240px] z-20 animate-slide-in">
+          <div className="absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 min-w-[240px] z-50 animate-slide-in">
             <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
               Color Schemes
             </div>
@@ -94,7 +89,7 @@ const ColorSchemeSelector: React.FC = () => {
                   </div>
                 </div>
                 {colorScheme === scheme.name && (
-                  <Check size={16} className="text-primary-500" />
+                  <Check size={16} className="text-green-500" />
                 )}
               </button>
             ))}
