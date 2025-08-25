@@ -13,7 +13,7 @@ const ColorSchemeSelector: React.FC = () => {
     { 
       name: 'classic-calm', 
       label: 'Classic Calm', 
-      colors: ['#DCF8C6', '#FFFFFF'],
+      colors: ['#3A4A6B', '#2F3A4F'],
       description: 'WhatsApp-style green & white'
     },
     { 
