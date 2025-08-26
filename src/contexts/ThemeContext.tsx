@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-type ColorScheme = 'electric-violet' | 'ocean-mint';
+type ColorScheme = 'classic-calm' | 'cool-blue-gray' | 'vibrant-violet-teal' | 'muted-pastels' | 'minimal-dark-neutral' | 'coral-purple';
 
 interface ThemeContextType {
   theme: Theme;
@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(() => {
     const saved = localStorage.getItem('colorScheme') as ColorScheme;
-    return saved || 'electric-violet';
+    return saved || 'coral-purple';
   });
 
   useEffect(() => {

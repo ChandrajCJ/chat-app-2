@@ -195,6 +195,20 @@ export default {
           '--secondary-border': '#047857',
           '--secondary-text': '#FFFFFF',
         },
+        '.coral-purple': {
+          '--sent-bg': '#FF6B6B',
+          '--sent-text': '#FFFFFF',
+          '--received-bg': '#9C27B0',
+          '--received-text': '#FFFFFF',
+          '--received-border': '#E91E63',
+        },
+        '.dark.coral-purple': {
+          '--sent-bg': '#FF5252',
+          '--sent-text': '#FFFFFF',
+          '--received-bg': '#8E24AA',
+          '--received-text': '#FFFFFF',
+          '--received-border': '#C2185B',
+        },
       });
     },
   ],
