@@ -22,6 +22,18 @@ const ColorSchemeSelector: React.FC = () => {
       colors: ['#0369A1', '#059669'],
       description: 'Deep ocean & fresh mint'
     },
+    { 
+      name: 'ruby-amethyst', 
+      label: 'Ruby Amethyst', 
+      colors: ['#C51E3A', '#A855F7'],
+      description: 'Passionate red & royal purple'
+    },
+    { 
+      name: 'lilo-stitch', 
+      label: 'Lilo & Stitch', 
+      colors: ['#2563EB', '#E8809A'],
+      description: 'Stitch blue & Lilo pink'
+    },
   ] as const;
 
   useEffect(() => {
