@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-type ColorScheme = 'classic-calm' | 'cool-blue' | 'vibrant-violet' | 'muted-pastels' | 'minimal-dark';
+type ColorScheme = 'electric-violet' | 'ocean-mint';
 
 interface ThemeContextType {
   theme: Theme;
@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(() => {
     const saved = localStorage.getItem('colorScheme') as ColorScheme;
-    return saved || 'classic-calm';
+    return saved || 'electric-violet';
   });
 
   useEffect(() => {
@@ -35,18 +35,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.classList.add(theme);
     
     // Update document class for color scheme
-    document.documentElement.classList.remove('classic-calm', 'cool-blue', 'vibrant-violet', 'muted-pastels', 'minimal-dark');
+    document.documentElement.classList.remove('electric-violet', 'ocean-mint');
     document.documentElement.classList.add(colorScheme);
     
     // Update meta theme-color based on theme and color scheme
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       const colors = {
-        'classic-calm': theme === 'dark' ? '#2C2C2C' : '#DCF8C6',
-        'cool-blue': theme === 'dark' ? '#2E2E2E' : '#1E88E5',
-        'vibrant-violet': theme === 'dark' ? '#1F8A85' : '#7C4DFF',
-        'muted-pastels': theme === 'dark' ? '#4FC3F7' : '#FFECB3',
-        'minimal-dark': theme === 'dark' ? '#4F545C' : '#5865F2'
+        'electric-violet': theme === 'dark' ? '#1E1B4B' : '#7C3AED',
+        'ocean-mint': theme === 'dark' ? '#0C4A6E' : '#0369A1'
       };
       metaThemeColor.setAttribute('content', colors[colorScheme]);
     }
