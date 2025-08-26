@@ -13,7 +13,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
   const { 
     messages, 
     sendMessage, 
-    loading, 
+    loading,
+    pagination,
+    loadMoreMessages,
+    loadMessagesUntil,
+    loadAllMessagesForSearch,
     userStatuses,
     editMessage,
     deleteMessage,
@@ -42,19 +46,51 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
       <ChatHeader 
         currentUser={currentUser} 
         userStatuses={userStatuses}
+        messages={messages}
         onDeleteAll={deleteAllMessages}
+        onScrollToMessage={(messageId: string) => {
+          // Find the message element and scroll to it
+          const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+          if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the message with dull, subtle background
+            messageElement.classList.add('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            setTimeout(() => {
+              messageElement.classList.remove('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            }, 3000);
+          }
+        }}
+        onLoadAllMessages={loadAllMessagesForSearch}
+        onLoadMessagesUntil={loadMessagesUntil}
       />
       
       <MessageList 
         messages={messages} 
         currentUser={currentUser}
         loading={loading}
+        pagination={pagination}
+        onLoadMore={loadMoreMessages}
         isOtherUserTyping={isOtherUserTyping}
         onReply={handleReply}
         onEdit={editMessage}
         onDelete={deleteMessage}
         onReact={reactToMessage}
         onRemoveReaction={removeReaction}
+        onScrollToMessage={(messageId: string) => {
+          // Find the message element and scroll to it
+          const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+          if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the message with dull, subtle background
+            messageElement.classList.add('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            setTimeout(() => {
+              messageElement.classList.remove('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            }, 3000);
+          }
+        }}
+        onLoadMessagesUntil={loadMessagesUntil}
       />
       
       <MessageInput 
