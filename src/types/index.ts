@@ -25,3 +25,10 @@ export interface UserStatus {
 }
 
 export type UserStatuses = Record<User, UserStatus>;
+
+export interface PaginationState {
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  lastVisible: any; // Firestore DocumentSnapshot
+  totalLoaded: number;
+}
