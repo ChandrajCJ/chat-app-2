@@ -1,20 +1,31 @@
 import React from 'react';
-import { User, UserStatuses } from '../types';
-import { ArrowLeft, UserRound, Trash2, Sun, Moon } from 'lucide-react';
+import { User, UserStatuses, Message } from '../types';
+import { ArrowLeft, UserRound } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { useTheme } from '../contexts/ThemeContext';
 import ColorSchemeSelector from './ColorSchemeSelector';
+import MessageActionsModal from './MessageActionsModal';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ChatHeaderProps {
   currentUser: User;
   userStatuses: UserStatuses;
+  messages: Message[];
   onDeleteAll: () => void;
+  onScrollToMessage: (messageId: string) => void;
+  onLoadAllMessages?: () => Promise<Message[]>;
+  onLoadMessagesUntil?: (messageId: string) => Promise<boolean>;
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDeleteAll }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ 
+  currentUser, 
+  userStatuses, 
+  messages, 
+  onDeleteAll, 
+  onScrollToMessage,
+  onLoadAllMessages,
+  onLoadMessagesUntil
+}) => {
   const { setUser } = useUser();
-  const { theme, toggleTheme } = useTheme();
   const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
   const otherUserStatus = userStatuses[otherUser];
   
@@ -22,11 +33,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
     setUser(null as any);
   };
 
-  const handleDeleteAll = () => {
-    if (window.confirm('Are you sure you want to delete all messages? This action cannot be undone.')) {
-      onDeleteAll();
-    }
-  };
+
 
   return (
     <div className="bg-gray-50/90 dark:bg-gray-900/80 backdrop-blur-md p-4 flex items-center justify-between border-b border-gray-300/50 dark:border-gray-800 transition-colors duration-300">
@@ -63,20 +70,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ currentUser, userStatuses, onDe
 
       <div className="flex items-center gap-2">
         <ColorSchemeSelector />
-        <button
-          onClick={toggleTheme}
-          className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-        <button
-          onClick={handleDeleteAll}
-          className="p-2 text-gray-400 dark:text-gray-400 hover:text-error-500 transition-colors duration-200"
-          title="Delete all messages"
-        >
-          <Trash2 size={20} />
-        </button>
+        <MessageActionsModal 
+          messages={messages}
+          onDeleteAll={onDeleteAll}
+          onScrollToMessage={onScrollToMessage}
+          onLoadAllMessages={onLoadAllMessages}
+          onLoadMessagesUntil={onLoadMessagesUntil}
+        />
       </div>
     </div>
   );
