@@ -422,53 +422,57 @@ export const useChat = (currentUser: User) => {
     // Initial load
     loadInitialMessages();
 
-    // Listen for new messages in real-time
+    // Listen for all message changes in real-time (new messages, reactions, edits)
     const messagesRef = collection(db, 'messages');
-    const q = query(
-      messagesRef,
-      orderBy('timestamp', 'desc'),
-      limit(1) // Only listen to the latest message
-    );
+    const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (snapshot.docs.length === 0) return;
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+        const message = {
+          id: change.doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          read: data.read || false,
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction
+        } as Message;
 
-      const latestDoc = snapshot.docs[0];
-      const data = latestDoc.data();
-      const latestMessage = {
-        id: latestDoc.id,
-        text: data.text || '',
-        sender: data.sender,
-        timestamp: data.timestamp?.toDate() || new Date(),
-        read: data.read || false,
-        replyTo: data.replyTo,
-        edited: data.edited || false,
-        voiceUrl: data.voiceUrl,
-        reaction: data.reaction
-      } as Message;
-
-      // Only add if it's a new message (not already in our list)
-      setMessages(prev => {
-        const isNewMessage = !prev.some(msg => msg.id === latestMessage.id);
-        if (isNewMessage) {
-          return [...prev, latestMessage];
+        if (change.type === 'added') {
+          // New message added
+          setMessages(prev => {
+            const isNewMessage = !prev.some(msg => msg.id === message.id);
+            if (isNewMessage) {
+              return [...prev, message];
+            }
+            return prev;
+          });
+        } else if (change.type === 'modified') {
+          // Message updated (reaction, edit, etc.)
+          setMessages(prev => 
+            prev.map(msg => msg.id === message.id ? message : msg)
+          );
+        } else if (change.type === 'removed') {
+          // Message deleted
+          setMessages(prev => prev.filter(msg => msg.id !== message.id));
         }
-        // Update existing message if it was edited or reacted to
-        return prev.map(msg => msg.id === latestMessage.id ? latestMessage : msg);
+
+        // Mark unread messages as read
+        if (message.sender !== currentUser && !message.read) {
+          pendingMessagesToMarkReadRef.current.add(message.id);
+          
+          if (markReadTimeoutRef.current) {
+            clearTimeout(markReadTimeoutRef.current);
+          }
+          
+          markReadTimeoutRef.current = setTimeout(() => {
+            batchMarkMessagesAsRead();
+          }, 500);
+        }
       });
-
-      // Mark unread messages as read
-      if (latestMessage.sender !== currentUser && !latestMessage.read) {
-        pendingMessagesToMarkReadRef.current.add(latestMessage.id);
-        
-        if (markReadTimeoutRef.current) {
-          clearTimeout(markReadTimeoutRef.current);
-        }
-        
-        markReadTimeoutRef.current = setTimeout(() => {
-          batchMarkMessagesAsRead();
-        }, 500);
-      }
     }, (error) => {
       console.error('Error listening to new messages:', error);
     });
