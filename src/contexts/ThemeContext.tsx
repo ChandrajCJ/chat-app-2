@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-type ColorScheme = 'electric-violet' | 'ocean-mint';
+type ColorScheme = 'electric-violet' | 'ocean-mint' | 'ruby-amethyst' | 'lilo-stitch';
 
 interface ThemeContextType {
   theme: Theme;
@@ -35,7 +35,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.classList.add(theme);
     
     // Update document class for color scheme
-    document.documentElement.classList.remove('electric-violet', 'ocean-mint');
+    document.documentElement.classList.remove('electric-violet', 'ocean-mint', 'ruby-amethyst', 'lilo-stitch');
     document.documentElement.classList.add(colorScheme);
     
     // Update meta theme-color based on theme and color scheme
@@ -43,7 +43,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (metaThemeColor) {
       const colors = {
         'electric-violet': theme === 'dark' ? '#1E1B4B' : '#7C3AED',
-        'ocean-mint': theme === 'dark' ? '#0C4A6E' : '#0369A1'
+        'ocean-mint': theme === 'dark' ? '#0C4A6E' : '#0369A1',
+        'ruby-amethyst': theme === 'dark' ? '#38080D' : '#C51E3A',
+        'lilo-stitch': theme === 'dark' ? '#172554' : '#2563EB'
       };
       metaThemeColor.setAttribute('content', colors[colorScheme]);
     }
