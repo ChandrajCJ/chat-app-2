@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
-import { Message, User, UserStatuses, ReactionType } from '../types';
+import { Message, User, UserStatuses, ReactionType, PaginationState } from '../types';
 
 export const useChat = (currentUser: User) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationState>({
+    hasMore: true,
+    isLoadingMore: false,
+    lastVisible: null,
+    totalLoaded: 0
+  });
   const [userStatuses, setUserStatuses] = useState<UserStatuses>({
     '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
@@ -258,16 +264,107 @@ export const useChat = (currentUser: User) => {
     }
   }, [currentUser]);
 
-  // Listen to messages - removed limit to show all messages
-  useEffect(() => {
-    const messagesRef = collection(db, 'messages');
-    const q = query(
-      messagesRef,
-      orderBy('timestamp', 'desc')
-      // Removed limit(50) to show all messages
-    );
+  // Load initial messages with pagination
+  const loadInitialMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      const messagesRef = collection(db, 'messages');
+      const q = query(
+        messagesRef,
+        orderBy('timestamp', 'desc'),
+        limit(10) // Reduced to 10 messages for instant loading
+      );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        setMessages([]);
+        setPagination(prev => ({
+          ...prev,
+          lastVisible: null,
+          hasMore: false,
+          totalLoaded: 0
+        }));
+        setLoading(false);
+        return;
+      }
+
+      const initialMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          read: data.read || false,
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction
+        } as Message;
+      }).reverse(); // Reverse to get chronological order
+
+      setMessages(initialMessages);
+      setPagination(prev => ({
+        ...prev,
+        lastVisible: snapshot.docs[snapshot.docs.length - 1],
+        hasMore: snapshot.docs.length === 10, // If we got less than 10, no more messages
+        totalLoaded: snapshot.docs.length
+      }));
+      setLoading(false);
+
+      // Batch mark unread messages from other users as read
+      const unreadMessages = initialMessages.filter(
+        message => message.sender !== currentUser && !message.read
+      );
+
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach(message => {
+          pendingMessagesToMarkReadRef.current.add(message.id);
+        });
+
+        if (markReadTimeoutRef.current) {
+          clearTimeout(markReadTimeoutRef.current);
+        }
+        
+        markReadTimeoutRef.current = setTimeout(() => {
+          batchMarkMessagesAsRead();
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error loading initial messages:', error);
+      setLoading(false);
+    }
+  }, [currentUser, batchMarkMessagesAsRead]);
+
+  // Load more messages for pagination
+  const loadMoreMessages = useCallback(async () => {
+    if (!pagination.hasMore || pagination.isLoadingMore || !pagination.lastVisible) {
+      return;
+    }
+
+    try {
+      setPagination(prev => ({ ...prev, isLoadingMore: true }));
+      
+      const messagesRef = collection(db, 'messages');
+      const q = query(
+        messagesRef,
+        orderBy('timestamp', 'desc'),
+        startAfter(pagination.lastVisible),
+        limit(30) // Increased batch size for faster subsequent loading
+      );
+
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        setPagination(prev => ({
+          ...prev,
+          hasMore: false,
+          isLoadingMore: false
+        }));
+        return;
+      }
+
       const newMessages = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
@@ -282,11 +379,21 @@ export const useChat = (currentUser: User) => {
           reaction: data.reaction
         } as Message;
       }).reverse(); // Reverse to get chronological order
-      
-      setMessages(newMessages);
-      setLoading(false);
 
-      // Batch mark unread messages from other users as read
+      // Prepend older messages to the beginning of the array
+      setMessages(prev => [...newMessages, ...prev]);
+      
+      // The lastVisible should be the last document in the query order (before reversing)
+      // This is the oldest message we just loaded, which will be our cursor for the next batch
+      setPagination(prev => ({
+        ...prev,
+        lastVisible: snapshot.docs[snapshot.docs.length - 1],
+        hasMore: snapshot.docs.length === 30, // If we got less than 30, no more messages
+        totalLoaded: prev.totalLoaded + snapshot.docs.length,
+        isLoadingMore: false
+      }));
+
+      // Batch mark unread messages as read
       const unreadMessages = newMessages.filter(
         message => message.sender !== currentUser && !message.read
       );
@@ -296,7 +403,64 @@ export const useChat = (currentUser: User) => {
           pendingMessagesToMarkReadRef.current.add(message.id);
         });
 
-        // Faster batch read updates (reduced from 1000ms to 500ms)
+        if (markReadTimeoutRef.current) {
+          clearTimeout(markReadTimeoutRef.current);
+        }
+        
+        markReadTimeoutRef.current = setTimeout(() => {
+          batchMarkMessagesAsRead();
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error loading more messages:', error);
+      setPagination(prev => ({ ...prev, isLoadingMore: false }));
+    }
+  }, [pagination, currentUser, batchMarkMessagesAsRead]);
+
+  // Real-time listener for new messages only (latest)
+  useEffect(() => {
+    // Initial load
+    loadInitialMessages();
+
+    // Listen for new messages in real-time
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef,
+      orderBy('timestamp', 'desc'),
+      limit(1) // Only listen to the latest message
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (snapshot.docs.length === 0) return;
+
+      const latestDoc = snapshot.docs[0];
+      const data = latestDoc.data();
+      const latestMessage = {
+        id: latestDoc.id,
+        text: data.text || '',
+        sender: data.sender,
+        timestamp: data.timestamp?.toDate() || new Date(),
+        read: data.read || false,
+        replyTo: data.replyTo,
+        edited: data.edited || false,
+        voiceUrl: data.voiceUrl,
+        reaction: data.reaction
+      } as Message;
+
+      // Only add if it's a new message (not already in our list)
+      setMessages(prev => {
+        const isNewMessage = !prev.some(msg => msg.id === latestMessage.id);
+        if (isNewMessage) {
+          return [...prev, latestMessage];
+        }
+        // Update existing message if it was edited or reacted to
+        return prev.map(msg => msg.id === latestMessage.id ? latestMessage : msg);
+      });
+
+      // Mark unread messages as read
+      if (latestMessage.sender !== currentUser && !latestMessage.read) {
+        pendingMessagesToMarkReadRef.current.add(latestMessage.id);
+        
         if (markReadTimeoutRef.current) {
           clearTimeout(markReadTimeoutRef.current);
         }
@@ -306,12 +470,11 @@ export const useChat = (currentUser: User) => {
         }, 500);
       }
     }, (error) => {
-      console.error('Error listening to messages:', error);
-      setLoading(false);
+      console.error('Error listening to new messages:', error);
     });
 
     return () => unsubscribe();
-  }, [currentUser, batchMarkMessagesAsRead]);
+  }, [currentUser, loadInitialMessages, batchMarkMessagesAsRead]);
 
   const sendMessage = async (text: string, replyTo?: Message) => {
     try {
@@ -419,10 +582,220 @@ export const useChat = (currentUser: User) => {
     }
   };
 
+  // Function to load all messages for search
+  const loadAllMessagesForSearch = useCallback(async () => {
+    try {
+      const messagesRef = collection(db, 'messages');
+      const q = query(messagesRef, orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      const allMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          read: data.read || false,
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction
+        } as Message;
+      }).reverse();
+      
+      return allMessages;
+    } catch (error) {
+      console.error('Error loading all messages:', error);
+      return [];
+    }
+  }, []);
+
+  // Optimized function to load messages until a specific message is found
+  const loadMessagesUntil = useCallback(async (targetMessageId: string): Promise<boolean> => {
+    try {
+      // Check if message is already loaded
+      const isAlreadyLoaded = messages.some(msg => msg.id === targetMessageId);
+      if (isAlreadyLoaded) {
+        return true;
+      }
+
+      console.log('Loading messages until target:', targetMessageId);
+
+      // Strategy 1: Try to get the specific message document first
+      const messagesRef = collection(db, 'messages');
+      const targetDocRef = doc(db, 'messages', targetMessageId);
+      
+      try {
+        const targetDocSnapshot = await getDocs(query(messagesRef, where('__name__', '==', targetDocRef)));
+        
+        if (!targetDocSnapshot.empty) {
+          const targetDoc = targetDocSnapshot.docs[0];
+          const targetData = targetDoc.data();
+          const targetTimestamp = targetData.timestamp;
+
+          if (targetTimestamp) {
+            console.log('Found target message timestamp, loading context');
+            // Load messages around the target timestamp
+            const contextQuery = query(
+              messagesRef,
+              orderBy('timestamp', 'desc'),
+              where('timestamp', '<=', targetTimestamp),
+              limit(150) // Load more messages around target
+            );
+
+            const contextSnapshot = await getDocs(contextQuery);
+            
+            if (!contextSnapshot.empty) {
+              const contextMessages = contextSnapshot.docs.map((doc) => {
+                const data = doc.data();
+                return {
+                  id: doc.id,
+                  text: data.text || '',
+                  sender: data.sender,
+                  timestamp: data.timestamp?.toDate() || new Date(),
+                  read: data.read || false,
+                  replyTo: data.replyTo,
+                  edited: data.edited || false,
+                  voiceUrl: data.voiceUrl,
+                  reaction: data.reaction
+                } as Message;
+              }).reverse();
+
+              const foundInContext = contextMessages.some(msg => msg.id === targetMessageId);
+              
+              if (foundInContext) {
+                console.log('Target message found in context, updating messages');
+                
+                // Merge messages without duplicates
+                setMessages(prev => {
+                  const existingIds = new Set(prev.map(msg => msg.id));
+                  const newMessages = contextMessages.filter(msg => !existingIds.has(msg.id));
+                  
+                  // Prepend older messages to maintain chronological order
+                  return [...newMessages, ...prev].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+                });
+
+                setPagination(prev => ({
+                  ...prev,
+                  totalLoaded: prev.totalLoaded + contextMessages.filter(msg => 
+                    !messages.some(existing => existing.id === msg.id)
+                  ).length,
+                  hasMore: true
+                }));
+
+                return true;
+              }
+            }
+          }
+        }
+      } catch (timestampError) {
+        console.log('Timestamp strategy failed, falling back to batch loading');
+      }
+
+      // Fallback: Use the reliable batch loading method
+      console.log('Using fallback batch loading');
+      return await loadMessagesInBatches(targetMessageId);
+    } catch (error) {
+      console.error('Error in loadMessagesUntil:', error);
+      // Final fallback to batch loading
+      return await loadMessagesInBatches(targetMessageId);
+    }
+  }, [messages, pagination]);
+
+  // Reliable batch loading function
+  const loadMessagesInBatches = useCallback(async (targetMessageId: string): Promise<boolean> => {
+    console.log('Starting batch loading for:', targetMessageId);
+    
+    let attempts = 0;
+    const maxAttempts = 8; // Increased attempts for better reliability
+    let currentLastVisible = pagination.lastVisible;
+    let foundMessage = false;
+
+    // If we don't have a cursor, start from the beginning
+    if (!currentLastVisible) {
+      console.log('No cursor found, starting fresh batch load');
+      const messagesRef = collection(db, 'messages');
+      const initialQuery = query(
+        messagesRef,
+        orderBy('timestamp', 'desc'),
+        limit(50)
+      );
+
+      const initialSnapshot = await getDocs(initialQuery);
+      if (!initialSnapshot.empty) {
+        currentLastVisible = initialSnapshot.docs[initialSnapshot.docs.length - 1];
+      }
+    }
+
+    while (!foundMessage && attempts < maxAttempts && currentLastVisible) {
+      attempts++;
+      console.log(`Batch loading attempt ${attempts}/${maxAttempts}`);
+      
+      const messagesRef = collection(db, 'messages');
+      const q = query(
+        messagesRef,
+        orderBy('timestamp', 'desc'),
+        startAfter(currentLastVisible),
+        limit(50) // Load 50 messages per batch
+      );
+
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        console.log('No more messages to load');
+        break;
+      }
+
+      const newMessages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          read: data.read || false,
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction
+        } as Message;
+      }).reverse();
+
+      foundMessage = newMessages.some(msg => msg.id === targetMessageId);
+      console.log(`Loaded ${newMessages.length} messages, target found:`, foundMessage);
+
+      // Add messages to the beginning of the array (older messages)
+      setMessages(prev => [...newMessages, ...prev]);
+      
+      // Update pagination state
+      setPagination(prev => ({
+        ...prev,
+        lastVisible: snapshot.docs[snapshot.docs.length - 1],
+        hasMore: snapshot.docs.length === 50,
+        totalLoaded: prev.totalLoaded + snapshot.docs.length
+      }));
+
+      currentLastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+      if (foundMessage) {
+        console.log('Target message found in batch!');
+        break;
+      }
+    }
+
+    console.log(`Batch loading completed. Found message:`, foundMessage);
+    return foundMessage;
+  }, [pagination, messages]);
+
   return { 
     messages, 
     sendMessage, 
     loading,
+    pagination,
+    loadMoreMessages,
+    loadMessagesUntil,
+    loadAllMessagesForSearch,
     userStatuses,
     editMessage,
     deleteMessage,
