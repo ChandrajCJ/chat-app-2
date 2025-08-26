@@ -131,12 +131,19 @@ const MessageList: React.FC<MessageListProps> = ({
 
     const messageCountChanged = messages.length !== prevMessagesLengthRef.current;
     const messagesIncreased = messages.length > prevMessagesLengthRef.current;
+    const isInitialLoad = prevMessagesLengthRef.current === 0 && messages.length > 0;
     
     if (messageCountChanged && messagesIncreased) {
       const newMessageCount = messages.length - prevMessagesLengthRef.current;
       
+      // Initial load - always scroll to bottom when first entering the app
+      if (isInitialLoad) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
       // If user is scrolled up and we loaded older messages (large batch)
-      if (isUserScrolledUpRef.current && newMessageCount >= 10) {
+      else if (isUserScrolledUpRef.current && newMessageCount >= 10) {
         // This indicates we loaded older messages, preserve scroll position
         const newScrollHeight = containerRef.current.scrollHeight;
         const heightDifference = newScrollHeight - prevScrollHeightRef.current;
@@ -222,6 +229,16 @@ const MessageList: React.FC<MessageListProps> = ({
       setShowNewMessagesBanner(false);
     }
   }, []);
+
+  // Scroll to bottom when component first loads with messages
+  useEffect(() => {
+    if (!loading && messages.length > 0 && messagesEndRef.current) {
+      // Use a longer timeout to ensure DOM is fully rendered
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 300);
+    }
+  }, [loading]); // Only trigger when loading state changes
 
   if (loading) {
     return (
