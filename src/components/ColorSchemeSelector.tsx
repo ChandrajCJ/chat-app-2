@@ -22,12 +22,6 @@ const ColorSchemeSelector: React.FC = () => {
       colors: ['#0369A1', '#059669'],
       description: 'Deep ocean & fresh mint'
     },
-    { 
-      name: 'coral-purple', 
-      label: 'Coral & Purple', 
-      colors: ['#FF6B6B', '#9C27B0'],
-      description: 'Warm coral & vibrant purple'
-    },
   ] as const;
 
   useEffect(() => {
