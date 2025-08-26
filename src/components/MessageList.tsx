@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Message, User, ReactionType, PaginationState } from '../types';
 import MessageItem from './MessageItem';
 import TypingIndicator from './TypingIndicator';
@@ -43,6 +43,10 @@ const MessageList: React.FC<MessageListProps> = ({
   const lastLoadTimeRef = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+  // State for Discord-style new messages banner
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const [showNewMessagesBanner, setShowNewMessagesBanner] = useState(false);
+
   // Handle scroll behavior
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -51,8 +55,15 @@ const MessageList: React.FC<MessageListProps> = ({
     const scrollFromBottom = scrollHeight - scrollTop - clientHeight;
     
     // Consider user scrolled up if they're more than 100px from bottom
+    const wasScrolledUp = isUserScrolledUpRef.current;
     isUserScrolledUpRef.current = scrollFromBottom > 100;
-  }, []);
+    
+    // If user scrolled to bottom, clear new messages banner
+    if (wasScrolledUp && !isUserScrolledUpRef.current && showNewMessagesBanner) {
+      setNewMessagesCount(0);
+      setShowNewMessagesBanner(false);
+    }
+  }, [showNewMessagesBanner]);
 
   // Automatic load more function with cooldown
   const handleLoadMore = useCallback(() => {
@@ -139,6 +150,11 @@ const MessageList: React.FC<MessageListProps> = ({
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
+      } else if (isUserScrolledUpRef.current && newMessageCount < 10) {
+        // User is scrolled up and new messages arrived (not a bulk load)
+        // Show the Discord-style banner
+        setNewMessagesCount(prev => prev + newMessageCount);
+        setShowNewMessagesBanner(true);
       }
     }
     
@@ -198,6 +214,15 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
+  // Handle clicking the new messages banner
+  const handleScrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setNewMessagesCount(0);
+      setShowNewMessagesBanner(false);
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -213,7 +238,7 @@ const MessageList: React.FC<MessageListProps> = ({
   return (
     <div 
       ref={containerRef} 
-      className="flex-1 overflow-y-auto px-4 py-4"
+      className="flex-1 overflow-y-auto px-4 py-4 relative"
       onScroll={handleScroll}
     >
       {messages.length === 0 ? (
@@ -255,6 +280,34 @@ const MessageList: React.FC<MessageListProps> = ({
           {isOtherUserTyping && <TypingIndicator />}
         </>
       )}
+      
+      {/* Discord-style new messages banner */}
+      {showNewMessagesBanner && newMessagesCount > 0 && (
+        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50">
+          <button
+            onClick={handleScrollToBottom}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow-xl border-2 border-white dark:border-gray-800 transition-all duration-200 flex items-center space-x-2 animate-slide-up"
+          >
+            <span className="text-sm font-semibold">
+              {newMessagesCount} new message{newMessagesCount !== 1 ? 's' : ''}
+            </span>
+            <svg 
+              className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M19 14l-7 7m0 0l-7-7m7 7V3" 
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+      
       <div ref={messagesEndRef} />
     </div>
   );
