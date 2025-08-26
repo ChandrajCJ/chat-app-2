@@ -1,44 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../contexts/ThemeContext';
-import { Palette, Check } from 'lucide-react';
+import { Palette, Check, Sun, Moon } from 'lucide-react';
 
 const ColorSchemeSelector: React.FC = () => {
-  const { colorScheme, setColorScheme } = useTheme();
+  const { theme, colorScheme, toggleTheme, setColorScheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   const colorSchemes = [
     { 
-      name: 'classic-calm', 
-      label: 'Classic Calm', 
-      colors: ['#3A4A6B', '#2F3A4F'],
-      description: 'WhatsApp-style green & white'
+      name: 'electric-violet', 
+      label: 'Electric Violet', 
+      colors: ['#7C3AED', '#3B82F6'],
+      description: 'Purple & blue harmony'
     },
     { 
-      name: 'cool-blue', 
-      label: 'Cool Blue & Gray', 
-      colors: ['#3C5A4C', '#2E3F35'],
-      description: 'Professional blue & gray'
-    },
-    { 
-      name: 'vibrant-violet', 
-      label: 'Vibrant Violet & Teal', 
-      colors: ['#7C4DFF', '#26A69A'],
-      description: 'Bold violet & teal contrast'
-    },
-    { 
-      name: 'muted-pastels', 
-      label: 'Muted Pastels', 
-      colors: ['#FFECB3', '#B3E5FC'],
-      description: 'Soft amber & blue pastels'
-    },
-    { 
-      name: 'minimal-dark', 
-      label: 'Minimal Dark-Neutral', 
-      colors: ['#5865F2', '#E3E5E8'],
-      description: 'Discord-style purple & gray'
+      name: 'ocean-mint', 
+      label: 'Ocean Mint', 
+      colors: ['#0369A1', '#059669'],
+      description: 'Deep ocean & fresh mint'
     },
   ] as const;
 
@@ -63,7 +45,7 @@ const ColorSchemeSelector: React.FC = () => {
       onClick={() => setIsOpen(false)}
     >
       <div 
-        className="absolute bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 py-2 min-w-[280px] animate-slide-in"
+        className="absolute bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 py-2 min-w-[320px] animate-slide-in"
         style={{
           top: `${dropdownPosition.top}px`,
           right: `${dropdownPosition.right}px`,
@@ -72,36 +54,80 @@ const ColorSchemeSelector: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
-          Color Schemes
+          Appearance Settings
         </div>
-        {colorSchemes.map((scheme) => (
-          <button
-            key={scheme.name}
-            onClick={() => handleSchemeChange(scheme.name)}
-            className="w-full px-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center gap-3"
-          >
-            <div className="flex gap-1">
-              {scheme.colors.map((color, index) => (
-                <div
-                  key={index}
-                  className="w-4 h-4 rounded-full border border-gray-200 dark:border-gray-600"
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                {scheme.label}
+        
+        {/* Theme Toggle Section */}
+        <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            Theme
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (theme === 'dark') toggleTheme();
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                theme === 'light'
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-2 border-primary-200 dark:border-primary-700'
+                  : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-transparent'
+              }`}
+            >
+              <Sun size={16} />
+              <span className="text-sm font-medium">Light</span>
+              {theme === 'light' && <Check size={14} className="text-primary-600 dark:text-primary-400" />}
+            </button>
+            <button
+              onClick={() => {
+                if (theme === 'light') toggleTheme();
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-2 border-primary-200 dark:border-primary-700'
+                  : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-transparent'
+              }`}
+            >
+              <Moon size={16} />
+              <span className="text-sm font-medium">Dark</span>
+              {theme === 'dark' && <Check size={14} className="text-primary-600 dark:text-primary-400" />}
+            </button>
+          </div>
+        </div>
+        
+        {/* Color Schemes Section */}
+        <div className="px-3 py-2">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            Color Schemes
+          </div>
+          {colorSchemes.map((scheme) => (
+            <button
+              key={scheme.name}
+              onClick={() => handleSchemeChange(scheme.name)}
+              className="w-full px-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center gap-3"
+            >
+              <div className="flex gap-1">
+                {scheme.colors.map((color, index) => (
+                  <div
+                    key={index}
+                    className="w-4 h-4 rounded-full border border-gray-200 dark:border-gray-600"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                {scheme.description}
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {scheme.label}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {scheme.description}
+                </div>
               </div>
-            </div>
-            {colorScheme === scheme.name && (
-              <Check size={16} className="text-green-500" />
-            )}
-          </button>
-        ))}
+              {colorScheme === scheme.name && (
+                <Check size={16} className="text-primary-600 dark:text-primary-400" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   ) : null;
@@ -112,7 +138,7 @@ const ColorSchemeSelector: React.FC = () => {
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
-        title="Change color scheme"
+        title="Appearance settings"
       >
         <Palette size={20} />
       </button>
