@@ -46,6 +46,7 @@ const MessageList: React.FC<MessageListProps> = ({
   // State for Discord-style new messages banner
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [showNewMessagesBanner, setShowNewMessagesBanner] = useState(false);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
 
   // Handle scroll behavior
   const handleScroll = useCallback(() => {
@@ -62,6 +63,11 @@ const MessageList: React.FC<MessageListProps> = ({
     if (wasScrolledUp && !isUserScrolledUpRef.current && showNewMessagesBanner) {
       setNewMessagesCount(0);
       setShowNewMessagesBanner(false);
+    }
+    
+    // If user scrolled to bottom, hide scroll to bottom button
+    if (wasScrolledUp && !isUserScrolledUpRef.current && showScrollToBottomButton) {
+      setShowScrollToBottomButton(false);
     }
   }, [showNewMessagesBanner]);
 
@@ -139,6 +145,7 @@ const MessageList: React.FC<MessageListProps> = ({
       // Get the new messages to check who sent them
       const newMessages = messages.slice(-newMessageCount);
       const newMessagesFromOtherUser = newMessages.filter(msg => msg.sender !== currentUser);
+      const newMessagesFromCurrentUser = newMessages.filter(msg => msg.sender === currentUser);
       
       // Initial load - always scroll to bottom when first entering the app
       if (isInitialLoad) {
@@ -166,6 +173,10 @@ const MessageList: React.FC<MessageListProps> = ({
         // Show the Discord-style banner only for messages from the other user
         setNewMessagesCount(prev => prev + newMessagesFromOtherUser.length);
         setShowNewMessagesBanner(true);
+      } else if (isUserScrolledUpRef.current && newMessageCount < 10 && newMessagesFromCurrentUser.length > 0) {
+        // User is scrolled up and sent their own message
+        // Show simple scroll to bottom button
+        setShowScrollToBottomButton(true);
       }
     }
     
@@ -231,6 +242,7 @@ const MessageList: React.FC<MessageListProps> = ({
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       setNewMessagesCount(0);
       setShowNewMessagesBanner(false);
+      setShowScrollToBottomButton(false);
     }
   }, []);
 
@@ -314,6 +326,31 @@ const MessageList: React.FC<MessageListProps> = ({
             </span>
             <svg 
               className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M19 14l-7 7m0 0l-7-7m7 7V3" 
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+      
+      {/* Simple scroll to bottom button for own messages */}
+      {showScrollToBottomButton && !showNewMessagesBanner && (
+        <div className="fixed bottom-24 right-6 z-50">
+          <button
+            onClick={handleScrollToBottom}
+            className="bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-xl border-2 border-white dark:border-gray-800 transition-all duration-200 animate-slide-up"
+            title="Scroll to bottom"
+          >
+            <svg 
+              className="w-5 h-5" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
