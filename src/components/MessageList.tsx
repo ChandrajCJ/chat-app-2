@@ -260,9 +260,9 @@ const MessageList: React.FC<MessageListProps> = ({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="animate-pulse flex space-x-2">
-          <div className="h-3 w-3 bg-primary-500 dark:bg-primary-400 rounded-full"></div>
-          <div className="h-3 w-3 bg-primary-500 dark:bg-primary-400 rounded-full"></div>
-          <div className="h-3 w-3 bg-primary-500 dark:bg-primary-400 rounded-full"></div>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--primary-500)' }}></div>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--primary-500)' }}></div>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--primary-500)' }}></div>
         </div>
       </div>
     );
@@ -275,10 +275,8 @@ const MessageList: React.FC<MessageListProps> = ({
       onScroll={handleScroll}
     >
       {messages.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-gray-500">
-        <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-400">
+        <div className="flex items-center justify-center h-full" style={{ color: 'var(--primary-600)' }}>
           No messages yet. Start the conversation!
-        </div>
         </div>
       ) : (
         <>
@@ -289,8 +287,9 @@ const MessageList: React.FC<MessageListProps> = ({
               className="flex justify-center py-2 min-h-[40px]"
             >
               {pagination.isLoadingMore && (
-                <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent"></div>
+                <div className="flex items-center space-x-2" style={{ color: 'var(--primary-600)' }}>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent"
+                       style={{ borderColor: 'var(--primary-500)' }}></div>
                   <span className="text-sm">Loading older messages...</span>
                 </div>
               )}
@@ -319,7 +318,13 @@ const MessageList: React.FC<MessageListProps> = ({
         <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50">
           <button
             onClick={handleScrollToBottom}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow-xl border-2 border-white dark:border-gray-800 transition-all duration-200 flex items-center space-x-2 animate-slide-up"
+            className="px-4 py-2 rounded-full shadow-xl border-2 border-white transition-all duration-200 flex items-center space-x-2 animate-slide-up hover:scale-105"
+            style={{
+              backgroundColor: 'var(--secondary-500)',
+              color: 'var(--secondary-text)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--secondary-600, var(--secondary-500))'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--secondary-500)'}
           >
             <span className="text-sm font-semibold">
               {newMessagesCount} new message{newMessagesCount !== 1 ? 's' : ''}
@@ -346,7 +351,13 @@ const MessageList: React.FC<MessageListProps> = ({
         <div className="fixed bottom-24 right-6 z-50">
           <button
             onClick={handleScrollToBottom}
-            className="bg-primary-500 hover:bg-primary-600 text-white p-3 rounded-full shadow-xl border-2 border-white dark:border-gray-800 transition-all duration-200 animate-slide-up"
+            className="p-3 rounded-full shadow-xl border-2 border-white transition-all duration-200 animate-slide-up hover:scale-105"
+            style={{
+              backgroundColor: 'var(--primary-500)',
+              color: 'var(--primary-text)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-600)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-500)'}
             title="Scroll to bottom"
           >
             <svg 

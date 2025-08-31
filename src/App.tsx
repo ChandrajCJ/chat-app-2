@@ -8,7 +8,13 @@ const ChatApp: React.FC = () => {
   const { currentUser } = useUser();
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 text-gray-700 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen transition-colors duration-300"
+         style={{
+           background: currentUser 
+             ? 'transparent' 
+             : 'linear-gradient(135deg, var(--primary-50) 0%, var(--secondary-50, var(--primary-100)) 100%)',
+           color: 'var(--primary-900)'
+         }}>
       {currentUser ? (
         <ChatContainer currentUser={currentUser} />
       ) : (

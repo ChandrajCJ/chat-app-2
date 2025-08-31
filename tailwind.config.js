@@ -89,6 +89,11 @@ export default {
           '0%': { opacity: 0, transform: 'translateY(20px) translateX(-50%) scale(0.9)' },
           '100%': { opacity: 1, transform: 'translateY(0) translateX(-50%) scale(1)' },
         },
+        highlight: {
+          '0%': { backgroundColor: 'var(--primary-200)' },
+          '50%': { backgroundColor: 'var(--primary-300)' },
+          '100%': { backgroundColor: 'var(--primary-200)' },
+        },
       },
       spacing: {
         'safe': 'env(safe-area-inset-bottom)',
@@ -97,6 +102,14 @@ export default {
       },
       backdropBlur: {
         xs: '2px',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.3s ease-in-out',
+        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+        'slide-in': 'slideIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'highlight': 'highlight 2s ease-in-out',
       },
     },
   },

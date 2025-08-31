@@ -42,7 +42,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-100 dark:bg-gray-950 safe-area-bottom transition-colors duration-300">
+    <div className="flex flex-col h-[100dvh] safe-area-bottom transition-colors duration-300"
+         style={{
+           background: 'linear-gradient(135deg, var(--primary-50) 0%, var(--secondary-50, var(--primary-100)) 100%)'
+         }}>
       <ChatHeader 
         currentUser={currentUser} 
         userStatuses={userStatuses}
@@ -55,9 +58,15 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
             messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             // Highlight the message with dull, subtle background
-            messageElement.classList.add('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            messageElement.classList.add('border-l-4', 'shadow-md');
+            messageElement.style.backgroundColor = 'var(--primary-100)';
+            messageElement.style.borderLeftColor = 'var(--primary-500)';
+            messageElement.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
             setTimeout(() => {
-              messageElement.classList.remove('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+              messageElement.classList.remove('border-l-4', 'shadow-md');
+              messageElement.style.backgroundColor = '';
+              messageElement.style.borderLeftColor = '';
+              messageElement.style.boxShadow = '';
             }, 3000);
           }
         }}
@@ -84,9 +93,15 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
             messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             // Highlight the message with dull, subtle background
-            messageElement.classList.add('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            messageElement.classList.add('border-l-4', 'shadow-md');
+            messageElement.style.backgroundColor = 'var(--primary-100)';
+            messageElement.style.borderLeftColor = 'var(--primary-500)';
+            messageElement.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
             setTimeout(() => {
-              messageElement.classList.remove('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+              messageElement.classList.remove('border-l-4', 'shadow-md');
+              messageElement.style.backgroundColor = '';
+              messageElement.style.borderLeftColor = '';
+              messageElement.style.boxShadow = '';
             }, 3000);
           }
         }}
