@@ -160,27 +160,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="backdrop-blur-md border-t p-3 sm:p-4 transition-colors duration-300"
-         style={{
-           backgroundColor: 'rgba(255, 255, 255, 0.9)',
-           borderTopColor: 'var(--primary-200)'
-         }}>
+    <div className="bg-gray-50/90 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-300/50 dark:border-gray-800 p-3 sm:p-4 transition-colors duration-300">
       {replyingTo && (
-        <div className="flex items-center justify-between p-2 rounded mb-2 border"
-             style={{
-               backgroundColor: 'var(--primary-50)',
-               borderColor: 'var(--primary-200)'
-             }}>
+        <div className="flex items-center justify-between bg-gray-200/60 dark:bg-gray-700/50 p-2 rounded mb-2">
           <div className="flex-1 min-w-0">
-            <div className="text-xs truncate" style={{ color: 'var(--primary-600)' }}>{replyingTo.sender}</div>
-            <div className="text-sm truncate max-w-full" style={{ color: 'var(--primary-800)' }}>{replyingTo.text}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-400 truncate">{replyingTo.sender}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-full">{replyingTo.text}</div>
           </div>
           <button 
             onClick={onCancelReply}
-            className="ml-2 p-1 shrink-0 transition-colors duration-200 rounded hover:bg-white/50"
-            style={{ color: 'var(--primary-600)' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-800)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary-600)'}
+            className="ml-2 p-1 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0 transition-colors duration-200"
           >
             <X size={16} />
           </button>
@@ -193,36 +182,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="flex-1 rounded-2xl px-4 py-2 focus:outline-none min-w-0 max-h-[150px] resize-none border transition-all duration-200"
-          style={{
-            backgroundColor: 'var(--primary-100)',
-            color: 'var(--primary-900)',
-            borderColor: 'var(--primary-300)',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = 'var(--primary-500)';
-            e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = 'var(--primary-300)';
-            e.target.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-          }}
+          className="flex-1 bg-gray-200/60 dark:bg-gray-800 text-gray-700 dark:text-gray-100 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-violet-400/50 dark:focus:ring-violet-400 min-w-0 max-h-[150px] resize-none border border-gray-300/50 dark:border-gray-700 transition-colors duration-200 placeholder-gray-400 dark:placeholder-gray-500"
           disabled={isRecording}
           rows={1}
         />
         {isRecording ? (
           <div className="flex items-center gap-2">
-            <span className="animate-pulse text-sm font-medium" style={{ color: '#ef4444' }}>
+            <span className="text-error-500 animate-pulse text-sm font-medium">
               {formatTime(recordingTime)}
             </span>
             <button
               type="button"
               onClick={stopRecording}
-              className="rounded-full p-2 text-white transition-all duration-200 shadow-lg hover:scale-105"
-              style={{ backgroundColor: '#ef4444' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+              className="rounded-full p-2 bg-error-500 text-white hover:bg-error-600 transition-colors duration-200 shadow-lg"
             >
               <Square size={20} />
             </button>
@@ -232,43 +204,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <button
               type="button"
               onClick={startRecording}
-              className="rounded-full p-2 transition-all duration-200 shrink-0 shadow-md hover:scale-105"
-              style={{
-                backgroundColor: 'var(--primary-200)',
-                color: 'var(--primary-700)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--primary-300)';
-                e.currentTarget.style.color = 'var(--primary-800)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--primary-200)';
-                e.currentTarget.style.color = 'var(--primary-700)';
-              }}
+              className="rounded-full p-2 bg-gray-300/60 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 shrink-0"
             >
               <Mic size={20} />
             </button>
             <button
               type="submit"
               className={`
-                rounded-full p-2 focus:outline-none shadow-lg
+                rounded-full p-2 text-white focus:outline-none shadow-lg
                 transition-all duration-200 shrink-0
-                ${message.trim() ? 'transform hover:scale-105' : 'pointer-events-none opacity-50'}
+                ${message.trim() 
+                  ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-600 dark:hover:bg-primary-500 transform hover:scale-105' 
+                  : 'bg-primary-300/60 dark:bg-primary-800 pointer-events-none'
+                }
               `}
-              style={{
-                backgroundColor: 'var(--primary-500)',
-                color: 'var(--primary-text)'
-              }}
-              onMouseEnter={(e) => {
-                if (message.trim()) {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-600)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (message.trim()) {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-500)';
-                }
-              }}
             >
               <Send size={20} />
             </button>

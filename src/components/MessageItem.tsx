@@ -168,34 +168,24 @@ const MessageItem: React.FC<MessageItemProps> = ({
         >
           {message.replyTo && (
             <div 
-              className="text-xs p-2 rounded mb-2 border-l-2 cursor-pointer transition-colors"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                borderLeftColor: 'rgba(255, 255, 255, 0.4)',
-                color: 'rgba(255, 255, 255, 0.9)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
+              className="text-xs bg-black/10 dark:bg-white/10 p-2 rounded mb-2 border-l-2 border-white/30 cursor-pointer hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
               onClick={handleReplyClick}
             >
-              <div className="truncate" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{message.replyTo.sender}</div>
+              <div className="text-white/70 truncate">{message.replyTo.sender}</div>
               <div className="truncate max-w-full">{message.replyTo.text}</div>
             </div>
           )}
           <div className="flex flex-col">
             <span className="text-sm font-medium flex items-center gap-2">
               {message.edited && (
-                <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>(edited)</span>
+                <span className="text-xs text-white/70">(edited)</span>
               )}
             </span>
             
             {message.voiceUrl ? (
               <button
                 onClick={handleVoicePlay}
-                className="flex items-center gap-2 mt-1 text-sm transition-colors"
-                style={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+                className="flex items-center gap-2 mt-1 text-sm hover:text-white/80 transition-colors"
               >
                 {isPlaying ? <Pause size={16} /> : <Play size={16} />}
                 <Mic size={16} />
@@ -208,11 +198,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   value={editText}
                   onChange={handleEditTextChange}
                   onKeyDown={handleEditKeyDown}
-                  className="w-full text-white rounded px-2 py-1 text-sm resize-none min-h-[2.5rem] max-h-[200px] focus:outline-none focus:ring-2"
-                  style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                    borderColor: 'rgba(255, 255, 255, 0.3)'
-                  }}
+                  className="w-full bg-black/20 dark:bg-white/20 text-white rounded px-2 py-1 text-sm resize-none min-h-[2.5rem] max-h-[200px] focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/50"
                   placeholder="Edit your message..."
                   rows={1}
                 />
@@ -222,10 +208,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                       setIsEditing(false);
                       setEditText(message.text);
                     }}
-                    className="px-3 py-1 rounded text-sm text-white transition-colors"
-                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.3)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.2)'}
+                    className="px-3 py-1 rounded text-sm bg-black/20 hover:bg-black/30 text-white transition-colors"
                   >
                     Cancel
                   </button>
@@ -234,22 +217,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
                     disabled={!editText.trim()}
                     className={`
                       px-3 py-1 rounded text-sm transition-colors
-                      ${editText.trim() ? 'text-white cursor-pointer' : 'cursor-not-allowed'}
+                      ${editText.trim()
+                        ? 'bg-white/20 hover:bg-white/30 text-white'
+                        : 'bg-black/10 text-white/50 cursor-not-allowed'
+                      }
                     `}
-                    style={{
-                      backgroundColor: editText.trim() ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                      color: editText.trim() ? 'white' : 'rgba(255, 255, 255, 0.5)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (editText.trim()) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (editText.trim()) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                      }
-                    }}
                   >
                     Save
                   </button>
@@ -265,47 +237,22 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 <div className="relative">
                   <button
                     onClick={toggleMenu}
-                    className="p-1 transition-colors duration-200 rounded"
-                    style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                    className="text-white/70 hover:text-white transition-colors duration-200 p-1"
                   >
                     <MoreVertical size={14} />
                   </button>
                   {showMenu && (
-                    <div className="absolute bottom-full right-0 mb-1 rounded-lg shadow-xl py-1 min-w-[120px] z-10 border animate-slide-in"
-                         style={{
-                           backgroundColor: 'white',
-                           borderColor: 'var(--primary-200)'
-                         }}>
+                    <div className="absolute bottom-full right-0 mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 min-w-[120px] z-10 border border-gray-200 dark:border-gray-700 animate-slide-in">
                       <button
                         onClick={startEditing}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm transition-colors rounded"
-                        style={{ color: 'var(--primary-700)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--primary-100)';
-                          e.currentTarget.style.color = 'var(--primary-800)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = 'var(--primary-700)';
-                        }}
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
                       >
                         <Edit2 size={14} />
                         Edit
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm transition-colors rounded"
-                        style={{ color: 'var(--primary-700)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--primary-100)';
-                          e.currentTarget.style.color = 'var(--primary-800)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = 'var(--primary-700)';
-                        }}
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
                       >
                         <Trash2 size={14} />
                         Delete
@@ -317,24 +264,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
               <div className="relative">
                 <button
                   onClick={toggleReactions}
-                  className="transition-colors duration-200 rounded p-1"
-                  style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                  className="text-white/70 hover:text-white transition-colors duration-200"
                 >
                   <SmilePlus size={14} />
                 </button>
                 {showReactions && (
                   <div className={`
                     absolute bottom-full ${isOwnMessage ? 'right-0' : '-left-2'} mb-1
-                    backdrop-blur-sm rounded-full shadow-xl py-1.5 px-2 flex gap-1.5 z-10
-                    border max-w-[calc(100vw-2rem)] overflow-x-auto animate-slide-in
+                    bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-xl py-1.5 px-2 flex gap-1.5 z-10
+                    border border-gray-300/50 dark:border-gray-700/50 max-w-[calc(100vw-2rem)] overflow-x-auto animate-slide-in
                     scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent
-                  `}
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    borderColor: 'var(--primary-300)'
-                  }}>
+                  `}>
                     {REACTIONS.map((emoji) => (
                       <button
                         key={emoji}
@@ -352,31 +292,24 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </div>
               <button
                 onClick={handleReply}
-                className="transition-colors duration-200 rounded p-1"
-                style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'}
+                className="text-white/70 hover:text-white transition-colors duration-200"
               >
                 <Reply size={14} />
               </button>
-              <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+              <span className="text-xs text-white/70">
                 {format(message.timestamp, 'h:mm a')}
               </span>
               {isOwnMessage && (
                 message.read ? (
-                  <CheckCheck size={14} style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                  <CheckCheck size={14} className="text-white/70" />
                 ) : (
-                  <Check size={14} style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                  <Check size={14} className="text-white/70" />
                 )
               )}
             </div>
             
             {message.reaction && typeof message.reaction === 'string' && (
-              <div className="inline-flex relative top-5 -mt-3 items-center px-1.5 py-0.5 rounded-full text-sm w-fit border-2 shadow-md"
-                   style={{
-                     backgroundColor: 'white',
-                     borderColor: 'var(--primary-200)'
-                   }}>
+              <div className="inline-flex relative top-5 -mt-3 items-center px-1.5 py-0.5 rounded-full text-sm w-fit bg-gray-50 dark:bg-gray-800 border-2 border-gray-200/60 dark:border-gray-900 shadow-md">
                 {message.reaction}
               </div>
             )}

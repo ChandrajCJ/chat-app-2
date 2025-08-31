@@ -61,24 +61,17 @@ const ColorSchemeSelector: React.FC = () => {
         style={{
           top: `${dropdownPosition.top}px`,
           right: `${dropdownPosition.right}px`,
-          zIndex: 99999,
-          backgroundColor: 'white',
-          borderColor: 'var(--primary-200)'
+          zIndex: 99999
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider border-b"
-             style={{ 
-               color: 'var(--primary-600)',
-               borderBottomColor: 'var(--primary-200)'
-             }}>
+        <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
           Appearance Settings
         </div>
         
         {/* Theme Toggle Section */}
-        <div className="px-3 py-3 border-b" style={{ borderBottomColor: 'var(--primary-200)' }}>
-          <div className="text-xs font-medium uppercase tracking-wider mb-2"
-               style={{ color: 'var(--primary-600)' }}>
+        <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
             Theme
           </div>
           <div className="flex gap-2">
@@ -88,30 +81,13 @@ const ColorSchemeSelector: React.FC = () => {
               }}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                 theme === 'light'
-                  ? 'border-2'
-                  : 'border-2 border-transparent'
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-2 border-primary-200 dark:border-primary-700'
+                  : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-transparent'
               }`}
-              style={{
-                backgroundColor: theme === 'light' ? 'var(--primary-100)' : 'var(--primary-50)',
-                color: theme === 'light' ? 'var(--primary-700)' : 'var(--primary-600)',
-                borderColor: theme === 'light' ? 'var(--primary-300)' : 'transparent'
-              }}
-              onMouseEnter={(e) => {
-                if (theme !== 'light') {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-100)';
-                  e.currentTarget.style.color = 'var(--primary-700)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (theme !== 'light') {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-50)';
-                  e.currentTarget.style.color = 'var(--primary-600)';
-                }
-              }}
             >
               <Sun size={16} />
               <span className="text-sm font-medium">Light</span>
-              {theme === 'light' && <Check size={14} style={{ color: 'var(--primary-600)' }} />}
+              {theme === 'light' && <Check size={14} className="text-primary-600 dark:text-primary-400" />}
             </button>
             <button
               onClick={() => {
@@ -119,79 +95,47 @@ const ColorSchemeSelector: React.FC = () => {
               }}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                 theme === 'dark'
-                  ? 'border-2'
-                  : 'border-2 border-transparent'
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-2 border-primary-200 dark:border-primary-700'
+                  : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-transparent'
               }`}
-              style={{
-                backgroundColor: theme === 'dark' ? 'var(--primary-100)' : 'var(--primary-50)',
-                color: theme === 'dark' ? 'var(--primary-700)' : 'var(--primary-600)',
-                borderColor: theme === 'dark' ? 'var(--primary-300)' : 'transparent'
-              }}
-              onMouseEnter={(e) => {
-                if (theme !== 'dark') {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-100)';
-                  e.currentTarget.style.color = 'var(--primary-700)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (theme !== 'dark') {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-50)';
-                  e.currentTarget.style.color = 'var(--primary-600)';
-                }
-              }}
             >
               <Moon size={16} />
               <span className="text-sm font-medium">Dark</span>
-              {theme === 'dark' && <Check size={14} style={{ color: 'var(--primary-600)' }} />}
+              {theme === 'dark' && <Check size={14} className="text-primary-600 dark:text-primary-400" />}
             </button>
           </div>
         </div>
         
         {/* Color Schemes Section */}
         <div className="px-3 py-2">
-          <div className="text-xs font-medium uppercase tracking-wider mb-2"
-               style={{ color: 'var(--primary-600)' }}>
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
             Color Schemes
           </div>
           {colorSchemes.map((scheme) => (
             <button
               key={scheme.name}
               onClick={() => handleSchemeChange(scheme.name)}
-              className="w-full px-3 py-3 text-left transition-colors duration-200 flex items-center gap-3 rounded-lg"
-              style={{
-                backgroundColor: colorScheme === scheme.name ? 'var(--primary-100)' : 'transparent'
-              }}
-              onMouseEnter={(e) => {
-                if (colorScheme !== scheme.name) {
-                  e.currentTarget.style.backgroundColor = 'var(--primary-50)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = colorScheme === scheme.name ? 'var(--primary-100)' : 'transparent';
-              }}
+              className="w-full px-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center gap-3"
             >
               <div className="flex gap-1">
                 {scheme.colors.map((color, index) => (
                   <div
                     key={index}
-                    className="w-4 h-4 rounded-full border"
-                    style={{ 
-                      backgroundColor: color,
-                      borderColor: 'var(--primary-300)'
-                    }}
+                    className="w-4 h-4 rounded-full border border-gray-200 dark:border-gray-600"
+                    style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium" style={{ color: 'var(--primary-800)' }}>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
                   {scheme.label}
                 </div>
-                <div className="text-xs" style={{ color: 'var(--primary-600)' }}>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   {scheme.description}
                 </div>
               </div>
               {colorScheme === scheme.name && (
-                <Check size={16} style={{ color: 'var(--primary-600)' }} />
+                <Check size={16} className="text-primary-600 dark:text-primary-400" />
               )}
             </button>
           ))}
@@ -205,16 +149,7 @@ const ColorSchemeSelector: React.FC = () => {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 transition-colors duration-200 rounded-lg"
-        style={{ color: 'var(--primary-600)' }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = 'var(--primary-800)';
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = 'var(--primary-600)';
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }}
+        className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
         title="Appearance settings"
       >
         <Palette size={20} />

@@ -212,30 +212,23 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
           zIndex: 99999,
           width: '420px',
           maxWidth: '90vw',
-          maxHeight: '70vh',
-          backgroundColor: 'white',
-          borderColor: 'var(--primary-200)'
+          maxHeight: '70vh'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider border-b"
-             style={{ 
-               color: 'var(--primary-600)',
-               borderBottomColor: 'var(--primary-200)'
-             }}>
+        <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
           Message Actions
         </div>
 
         {/* Search Section */}
-        <div className="p-3 border-b" style={{ borderBottomColor: 'var(--primary-200)' }}>
-          <div className="text-xs font-medium uppercase tracking-wider mb-2"
-               style={{ color: 'var(--primary-600)' }}>
+        <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
             Search Messages
           </div>
           
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} style={{ color: 'var(--primary-500)' }} />
+              <Search size={16} className="text-gray-400" />
             </div>
             <input
               ref={searchInputRef}
@@ -244,30 +237,14 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={isSearching ? "Loading all messages..." : "Search in conversation..."}
               disabled={isSearching}
-              className="block w-full pl-10 pr-10 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 transition-all duration-200"
-              style={{
-                backgroundColor: 'var(--primary-50)',
-                borderColor: 'var(--primary-300)',
-                color: 'var(--primary-900)'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = 'var(--primary-500)';
-                e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'var(--primary-300)';
-                e.target.style.boxShadow = 'none';
-              }}
+              className="block w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
             />
             {searchQuery && (
               <button
                 onClick={clearSearch}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
-                <X size={16} 
-                   style={{ color: 'var(--primary-500)' }}
-                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-700)'}
-                   onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary-500)'} />
+                <X size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
               </button>
             )}
           </div>
@@ -275,7 +252,7 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
           {/* Search Results Summary */}
           {searchQuery && (
             <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs" style={{ color: 'var(--primary-600)' }}>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 {isSearching
                   ? 'Loading messages...'
                   : searchResults.length > 0 
@@ -287,35 +264,17 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
                 <div className="flex gap-1">
                   <button
                     onClick={() => navigateResults('up')}
-                    className="p-1 rounded transition-colors duration-200"
-                    style={{ color: 'var(--primary-500)' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-100)';
-                      e.currentTarget.style.color = 'var(--primary-700)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'var(--primary-500)';
-                    }}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                     title="Previous result"
                   >
-                    <ArrowUp size={12} />
+                    <ArrowUp size={12} className="text-gray-400" />
                   </button>
                   <button
                     onClick={() => navigateResults('down')}
-                    className="p-1 rounded transition-colors duration-200"
-                    style={{ color: 'var(--primary-500)' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-100)';
-                      e.currentTarget.style.color = 'var(--primary-700)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'var(--primary-500)';
-                    }}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                     title="Next result"
                   >
-                    <ArrowDown size={12} />
+                    <ArrowDown size={12} className="text-gray-400" />
                   </button>
                 </div>
               )}
@@ -325,36 +284,27 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
 
         {/* Search Results */}
         {searchQuery && !isSearching && searchResults.length > 0 && (
-          <div className="max-h-60 overflow-y-auto border-t" style={{ borderTopColor: 'var(--primary-200)' }}>
-            <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider"
-                 style={{ color: 'var(--primary-600)' }}>
+          <div className="max-h-60 overflow-y-auto border-t border-gray-100 dark:border-gray-700">
+            <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Search Results ({searchResults.length})
             </div>
             {searchResults.map((result, index) => (
               <button
                 key={result.message.id}
                 onClick={() => handleSearchResultClick(result)}
-                className="w-full px-3 py-2 text-left transition-colors duration-200 border-l-4"
-                style={{
-                  borderLeftColor: index === currentResultIndex ? 'var(--primary-500)' : 'transparent',
-                  backgroundColor: index === currentResultIndex ? 'var(--primary-100)' : 'transparent'
-                }}
-                onMouseEnter={(e) => {
-                  if (index !== currentResultIndex) {
-                    e.currentTarget.style.backgroundColor = 'var(--primary-50)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = index === currentResultIndex ? 'var(--primary-100)' : 'transparent';
-                }}
+                className={`w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 border-l-4 ${
+                  index === currentResultIndex 
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
+                    : 'border-transparent'
+                }`}
               >
                 <div className="flex items-start gap-2">
                   <span className="text-lg">{result.message.sender}</span>
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    <div className="text-sm line-clamp-2 break-words" style={{ color: 'var(--primary-900)' }}>
+                    <div className="text-sm text-gray-900 dark:text-gray-100 line-clamp-2 break-words">
                       {highlightText(result.message.text, searchQuery)}
                     </div>
-                    <div className="text-xs mt-1 truncate" style={{ color: 'var(--primary-600)' }}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                       {formatDistanceToNow(result.message.timestamp, { addSuffix: true })}
                     </div>
                   </div>
@@ -366,33 +316,29 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
 
         {/* No results message */}
         {searchQuery && !isSearching && searchResults.length === 0 && (
-          <div className="px-3 py-4 text-center border-t" style={{ borderTopColor: 'var(--primary-200)' }}>
-            <div className="text-sm break-words" style={{ color: 'var(--primary-600)' }}>
+          <div className="px-3 py-4 text-center border-t border-gray-100 dark:border-gray-700">
+            <div className="text-sm text-gray-500 dark:text-gray-400 break-words">
               No messages found matching "<span className="font-medium">{searchQuery}</span>"
             </div>
-            <div className="text-xs mt-1" style={{ color: 'var(--primary-500)' }}>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               Searched through {allMessages.length} messages
             </div>
           </div>
         )}
 
         {/* Delete All Section */}
-        <div className="border-t" style={{ borderTopColor: 'var(--primary-200)' }}>
-          <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider"
-               style={{ color: 'var(--primary-600)' }}>
+        <div className="border-t border-gray-100 dark:border-gray-700">
+          <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Danger Zone
           </div>
           <button
             onClick={handleDeleteAll}
-            className="w-full px-3 py-3 text-left transition-colors duration-200 flex items-center gap-3 rounded-lg"
-            style={{ color: '#dc2626' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            className="w-full px-3 py-3 text-left hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 flex items-center gap-3 text-red-600 dark:text-red-400"
           >
             <Trash2 size={16} />
             <div>
               <div className="text-sm font-medium">Delete All Messages</div>
-              <div className="text-xs" style={{ color: '#ef4444' }}>
+              <div className="text-xs text-red-500 dark:text-red-400">
                 This action cannot be undone
               </div>
             </div>
@@ -407,16 +353,7 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 transition-colors duration-200 rounded-lg"
-        style={{ color: 'var(--primary-600)' }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = 'var(--primary-800)';
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = 'var(--primary-600)';
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }}
+        className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
         title="Message actions"
       >
         <MoreHorizontal size={20} />
