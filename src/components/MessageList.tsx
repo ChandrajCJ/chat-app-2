@@ -136,6 +136,10 @@ const MessageList: React.FC<MessageListProps> = ({
     if (messageCountChanged && messagesIncreased) {
       const newMessageCount = messages.length - prevMessagesLengthRef.current;
       
+      // Get the new messages to check who sent them
+      const newMessages = messages.slice(-newMessageCount);
+      const newMessagesFromOtherUser = newMessages.filter(msg => msg.sender !== currentUser);
+      
       // Initial load - always scroll to bottom when first entering the app
       if (isInitialLoad) {
         setTimeout(() => {
@@ -157,16 +161,16 @@ const MessageList: React.FC<MessageListProps> = ({
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
-      } else if (isUserScrolledUpRef.current && newMessageCount < 10) {
-        // User is scrolled up and new messages arrived (not a bulk load)
-        // Show the Discord-style banner
-        setNewMessagesCount(prev => prev + newMessageCount);
+      } else if (isUserScrolledUpRef.current && newMessageCount < 10 && newMessagesFromOtherUser.length > 0) {
+        // User is scrolled up and new messages from OTHER USER arrived (not a bulk load)
+        // Show the Discord-style banner only for messages from the other user
+        setNewMessagesCount(prev => prev + newMessagesFromOtherUser.length);
         setShowNewMessagesBanner(true);
       }
     }
     
     prevMessagesLengthRef.current = messages.length;
-  }, [messages]);
+  }, [messages, currentUser]);
 
 
 
