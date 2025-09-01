@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Message, User, ReactionType } from '../types';
 import { format } from 'date-fns';
-import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus } from 'lucide-react';
+import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus } from 'lucide-react';
 
 interface MessageItemProps {
   message: Message;
@@ -14,7 +14,77 @@ interface MessageItemProps {
   scrollToMessage?: (messageId: string) => void;
 }
 
-const REACTIONS: ReactionType[] = ['🖤', '👀', '😭', '🌚', '🤣', '👍'];
+const REACTIONS: ReactionType[] = ['🖤', '👀', '😭', '🌚', '🤣'];
+
+// Comprehensive emoji categories
+const EMOJI_CATEGORIES = {
+  'Most Used': [
+    '😘', '👍', '💀', '🖕', '😤', '🥲', '🤤', '🤡', '🕺', '💃'
+  ],
+  'Smileys & Emotion': [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '🫠', '😉', '😊', '😇',
+    '🥰', '😍', '🤩', '😘', '😗', '☺️', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝',
+    '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥',
+    '😶‍🌫️', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😔', '😪', '🤤', '😴', '😷', '🤒',
+    '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '😵‍💫', '🤯', '🤠', '🥳', '🥸',
+    '😎', '🤓', '🧐', '😕', '🫤', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '🥹',
+    '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫',
+    '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻',
+    '👽', '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'
+  ],
+  'People & Body': [
+    '👋', '🤚', '🖐️', '✋', '🖖', '🫱', '🫲', '🫳', '🫴', '👌', '🤌', '🤏', '✌️', '🤞',
+    '🫰', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '🫵', '👍', '👎', '👊',
+    '✊', '🤛', '🤜', '👏', '🙌', '🫶', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪',
+    '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️',
+    '👅', '👄', '🫦', '👶', '🧒', '👦', '👧', '🧑', '👱', '👨', '🧔', '🧔‍♂️', '🧔‍♀️',
+    '👨‍🦰', '👨‍🦱', '👨‍🦳', '👨‍🦲', '👩', '👩‍🦰', '👩‍🦱', '👩‍🦳', '👩‍🦲', '👱‍♀️',
+    '👱‍♂️', '🧓', '👴', '👵', '🙍', '🙍‍♂️', '🙍‍♀️', '🙎', '🙎‍♂️', '🙎‍♀️', '🙅',
+    '🙅‍♂️', '🙅‍♀️', '🙆', '🙆‍♂️', '🙆‍♀️', '💁', '💁‍♂️', '💁‍♀️', '🙋', '🙋‍♂️', '🙋‍♀️'
+  ],
+  'Animals & Nature': [
+    '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷',
+    '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆',
+    '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜',
+    '🪰', '🪲', '🪳', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙',
+    '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆',
+    '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂',
+    '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛'
+  ],
+  'Food & Drink': [
+    '🍎', '🍏', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭',
+    '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒',
+    '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞',
+    '🧇', '🥓', '🥩', '🍗', '🍖', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮',
+    '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪',
+    '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁'
+  ],
+  'Activities': [
+    '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒',
+    '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹',
+    '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🏋️‍♂️', '🏋️‍♀️', '🤼', '🤼‍♂️',
+    '🤼‍♀️', '🤸', '🤸‍♂️', '🤸‍♀️', '⛹️', '⛹️‍♂️', '⛹️‍♀️', '🤺', '🤾', '🤾‍♂️', '🤾‍♀️',
+    '🏌️', '🏌️‍♂️', '🏌️‍♀️', '🏇', '🧘', '🧘‍♂️', '🧘‍♀️', '🏄', '🏄‍♂️', '🏄‍♀️', '🏊',
+    '🏊‍♂️', '🏊‍♀️', '🤽', '🤽‍♂️', '🤽‍♀️', '🚣', '🚣‍♂️', '🚣‍♀️', '🧗', '🧗‍♂️', '🧗‍♀️',
+    '🚵', '🚵‍♂️', '🚵‍♀️', '🚴', '🚴‍♂️', '🚴‍♀️', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️',
+    '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🤹‍♂️', '🤹‍♀️', '🎭', '🩰', '🎨', '🎬', '🎤'
+  ],
+  'Objects': [
+    '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿',
+    '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻',
+    '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🪫', '🔌',
+    '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳',
+    '💎', '⚖️', '🪜', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱'
+  ],
+  'Symbols': [
+    '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕',
+    '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯',
+    '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑',
+    '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️',
+    '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑',
+    '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳'
+  ]
+};
 
 const MessageItem: React.FC<MessageItemProps> = ({ 
   message, 
@@ -30,11 +100,30 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [editText, setEditText] = useState(message.text);
   const [showMenu, setShowMenu] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showExpandedPicker, setShowExpandedPicker] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Most Used');
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const isOwnMessage = message.sender === currentUser;
+  const [pickerPosition, setPickerPosition] = useState<{ right: boolean; hasSpace: boolean; centerAlign?: boolean } | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Recalculate picker position on window resize if picker is open
+  useEffect(() => {
+    const handleResize = () => {
+      if (showExpandedPicker && pickerPosition) {
+        const newPosition = calculatePickerPosition();
+        setPickerPosition(newPosition);
+      }
+    };
+
+    if (showExpandedPicker && pickerPosition) {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [showExpandedPicker, pickerPosition, isOwnMessage]);
 
   const handleEdit = () => {
     if (editText.trim() && editText !== message.text) {
@@ -82,21 +171,104 @@ const MessageItem: React.FC<MessageItemProps> = ({
     e.stopPropagation();
     setShowMenu(!showMenu);
     setShowReactions(false);
+    setShowExpandedPicker(false);
+    setPickerPosition(null);
   };
 
   const toggleReactions = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     setShowReactions(!showReactions);
     setShowMenu(false);
+    setShowExpandedPicker(false);
+    setPickerPosition(null);
   };
 
-  const handleReaction = (emoji: ReactionType) => {
+  const toggleExpandedPicker = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    
+    if (!showExpandedPicker) {
+      // Calculate position synchronously
+      const position = calculatePickerPosition();
+      setPickerPosition(position);
+      setShowExpandedPicker(true);
+    } else {
+      setShowExpandedPicker(false);
+      setPickerPosition(null);
+    }
+    
+    setShowReactions(false);
+    setShowMenu(false);
+  };
+
+  const handleReaction = (emoji: ReactionType | string) => {
     if (message.reaction === emoji) {
       onRemoveReaction(message.id);
     } else {
-      onReact(message.id, emoji);
+      // Cast string emoji to ReactionType for the handler
+      onReact(message.id, emoji as ReactionType);
     }
     setShowReactions(false);
+    setShowExpandedPicker(false);
+    setPickerPosition(null);
+  };
+
+  const handleCategorySelect = (category: string, e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    setSelectedCategory(category);
+  };
+
+  // Calculate optimal position for expanded picker to prevent viewport overflow
+  const calculatePickerPosition = (): { right: boolean; hasSpace: boolean; centerAlign?: boolean } => {
+    if (!messageRef.current) {
+      // Fallback to center alignment if ref is not available
+      return {
+        right: false,
+        hasSpace: false,
+        centerAlign: true
+      };
+    }
+
+    const messageRect = messageRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const pickerWidth = 320; // 80 * 0.25rem = 320px
+    const safeMargin = 16; // Margin for desktop positioning
+    
+    // For mobile screens and tablets, always use fixed center alignment
+    if (viewportWidth < 768) {
+      return {
+        right: false,
+        hasSpace: false,
+        centerAlign: true
+      };
+    }
+    
+    // Desktop logic - calculate available space more conservatively  
+    const spaceOnRight = Math.max(0, viewportWidth - messageRect.right - safeMargin);
+    const spaceOnLeft = Math.max(0, messageRect.left - safeMargin);
+    
+    // Check if we have enough space for the picker on either side
+    const canFitRight = spaceOnRight >= pickerWidth;
+    const canFitLeft = spaceOnLeft >= pickerWidth;
+    
+    if (isOwnMessage) {
+      // For own messages, prefer right alignment
+      if (canFitRight) {
+        return { right: true, hasSpace: true, centerAlign: false };
+      } else if (canFitLeft) {
+        return { right: false, hasSpace: true, centerAlign: false };
+      } else {
+        return { right: false, hasSpace: false, centerAlign: true };
+      }
+    } else {
+      // For other user messages, prefer left alignment
+      if (canFitLeft) {
+        return { right: false, hasSpace: true, centerAlign: false };
+      } else if (canFitRight) {
+        return { right: true, hasSpace: true, centerAlign: false };
+      } else {
+        return { right: false, hasSpace: false, centerAlign: true };
+      }
+    }
   };
 
   const startEditing = (e: React.MouseEvent | React.TouchEvent) => {
@@ -148,6 +320,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
       onClick={() => {
         setShowMenu(false);
         setShowReactions(false);
+        setShowExpandedPicker(false);
+        setPickerPosition(null);
       }}
       data-message-id={message.id}
     >
@@ -287,6 +461,85 @@ const MessageItem: React.FC<MessageItemProps> = ({
                         {emoji}
                       </button>
                     ))}
+                    <button
+                      onClick={toggleExpandedPicker}
+                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:scale-125 transition-all duration-200 shrink-0 bg-gray-200/50 dark:bg-gray-700/50 rounded-full p-1"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Mobile backdrop overlay */}
+                {showExpandedPicker && pickerPosition && pickerPosition.centerAlign && (
+                  <div 
+                    className="fixed inset-0 bg-black/20 z-10"
+                    onClick={() => {
+                      setShowExpandedPicker(false);
+                      setPickerPosition(null);
+                    }}
+                  />
+                )}
+
+                {/* Expanded Emoji Picker */}
+                {showExpandedPicker && pickerPosition && (
+                  <div 
+                    ref={pickerRef}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`
+                      animate-slide-in overflow-hidden
+                      bg-white dark:bg-gray-800 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-300/50 dark:border-gray-700/50
+                      ${(() => {
+                        if (pickerPosition.centerAlign) {
+                          // For mobile/center alignment, use fixed positioning relative to viewport
+                          return 'fixed bottom-24 left-1/2 transform -translate-x-1/2 w-[calc(100vw-2rem)] max-w-sm z-30';
+                        } else if (pickerPosition.hasSpace) {
+                          // Desktop positioning relative to message
+                          return `absolute bottom-full mb-1 w-80 z-20 ${pickerPosition.right ? 'right-0' : 'left-0'}`;
+                        } else {
+                          // Fallback to fixed positioning for edge cases
+                          return 'fixed bottom-24 left-1/2 transform -translate-x-1/2 w-[calc(100vw-2rem)] max-w-sm z-30';
+                        }
+                      })()}
+                    `}
+                  >
+                    {/* Category Tabs */}
+                    <div className="flex overflow-x-auto bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                      {Object.keys(EMOJI_CATEGORIES).map((category) => (
+                        <button
+                          key={category}
+                          onClick={(e) => handleCategorySelect(category, e)}
+                          className={`
+                            px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors duration-200 shrink-0
+                            ${selectedCategory === category
+                              ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400 bg-white dark:bg-gray-800'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            }
+                          `}
+                        >
+                          {category.split(' ')[0]}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Emoji Grid */}
+                    <div className="p-2 h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-8 gap-1">
+                        {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES]?.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => handleReaction(emoji)}
+                            className={`
+                              text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1.5 transition-all duration-200 hover:scale-110
+                              ${message.reaction === emoji ? 'bg-gray-200 dark:bg-gray-600 opacity-60' : ''}
+                            `}
+                            title={emoji}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
