@@ -1,6 +1,6 @@
 export type User = '🐞' | '🦎';
 
-export type ReactionType = '🖤' | '👀' | '😭' | '🌚' | '🤣' | '👍';
+export type ReactionType = string; // Allow any emoji string for reactions
 
 export interface Message {
   id: string;
