@@ -101,6 +101,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [showExpandedPicker, setShowExpandedPicker] = useState(false);
+  const [isCalculatingPosition, setIsCalculatingPosition] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Most Used');
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
@@ -187,13 +188,19 @@ const MessageItem: React.FC<MessageItemProps> = ({
     e.stopPropagation();
     
     if (!showExpandedPicker) {
-      // Calculate position and set both states together
-      const position = calculatePickerPosition();
-      setPickerPosition(position);
-      setShowExpandedPicker(true);
+      setIsCalculatingPosition(true);
+      
+      // Use setTimeout to ensure DOM is ready for position calculation
+      setTimeout(() => {
+        const position = calculatePickerPosition();
+        setPickerPosition(position);
+        setShowExpandedPicker(true);
+        setIsCalculatingPosition(false);
+      }, 0);
     } else {
       setShowExpandedPicker(false);
       setPickerPosition(null);
+      setIsCalculatingPosition(false);
     }
     
     setShowReactions(false);
@@ -471,18 +478,19 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 )}
                 
                 {/* Mobile backdrop overlay */}
-                {showExpandedPicker && pickerPosition && pickerPosition.centerAlign && (
+                {showExpandedPicker && pickerPosition && pickerPosition.centerAlign && !isCalculatingPosition && (
                   <div 
                     className="fixed inset-0 bg-black/20 z-10"
                     onClick={() => {
                       setShowExpandedPicker(false);
                       setPickerPosition(null);
+                      setIsCalculatingPosition(false);
                     }}
                   />
                 )}
 
                 {/* Expanded Emoji Picker */}
-                {showExpandedPicker && pickerPosition && (
+                {showExpandedPicker && pickerPosition && !isCalculatingPosition && (
                   <div 
                     ref={pickerRef}
                     onClick={(e) => e.stopPropagation()}
