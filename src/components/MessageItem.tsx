@@ -187,14 +187,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
     e.stopPropagation();
     
     if (!showExpandedPicker) {
-      // Calculate position before showing the picker to prevent jumping
+      // Calculate position and set both states together
       const position = calculatePickerPosition();
       setPickerPosition(position);
-      
-      // Use requestAnimationFrame to ensure position is set before showing
-      requestAnimationFrame(() => {
-        setShowExpandedPicker(true);
-      });
+      setShowExpandedPicker(true);
     } else {
       setShowExpandedPicker(false);
       setPickerPosition(null);
@@ -486,12 +482,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 )}
 
                 {/* Expanded Emoji Picker */}
-                {pickerPosition && showExpandedPicker && (
+                {showExpandedPicker && pickerPosition && (
                   <div 
                     ref={pickerRef}
                     onClick={(e) => e.stopPropagation()}
                     className={`
-                      overflow-hidden transition-opacity duration-200
+                      overflow-hidden
                       bg-white dark:bg-gray-800 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-300/50 dark:border-gray-700/50
                       ${(() => {
                         if (pickerPosition.centerAlign) {
@@ -505,7 +501,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                           return 'fixed bottom-24 left-1/2 transform -translate-x-1/2 w-[calc(100vw-2rem)] max-w-sm z-30';
                         }
                       })()}
-                      ${showExpandedPicker ? 'opacity-100 animate-slide-in' : 'opacity-0'}
+                      animate-slide-in
                     `}
                   >
                     {/* Category Tabs */}
