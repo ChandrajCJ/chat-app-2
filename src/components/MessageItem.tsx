@@ -19,7 +19,7 @@ const REACTIONS: ReactionType[] = ['🖤', '👀', '😭', '🌚', '🤣'];
 // Comprehensive emoji categories
 const EMOJI_CATEGORIES = {
   'Most Used': [
-    '😘', '👍', '💀', '🖕', '😤', '🥲', '🤤', '🤡', '🕺', '💃'
+    '😘', '👍', '💀', '🖕', '😤', '🥲', '🤤', '🤡', '🕺', '💃', '🫂'
   ],
   'Smileys & Emotion': [
     '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '🫠', '😉', '😊', '😇',
@@ -563,6 +563,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </span>
               {isOwnMessage && (
                 message.read ? (
+                  <CheckCheck size={14} className="text-blue-400" />
+                ) : message.delivered ? (
                   <CheckCheck size={14} className="text-white/70" />
                 ) : (
                   <Check size={14} className="text-white/70" />
