@@ -58,14 +58,23 @@ export const useChat = (currentUser: User) => {
   // Batch mark messages as read
   const batchMarkMessagesAsRead = useCallback(async () => {
     if (pendingMessagesToMarkReadRef.current.size === 0) return;
+    
+    // Only mark as read if user is actually online
+    if (!isOnlineRef.current) {
+      return;
+    }
 
     try {
       const batch = writeBatch(db);
       const messageIds = Array.from(pendingMessagesToMarkReadRef.current);
+      const readTimestamp = serverTimestamp();
       
       messageIds.forEach(messageId => {
         const messageRef = doc(db, 'messages', messageId);
-        batch.update(messageRef, { read: true });
+        batch.update(messageRef, { 
+          read: true,
+          readAt: readTimestamp
+        });
       });
 
       await batch.commit();
@@ -296,7 +305,9 @@ export const useChat = (currentUser: User) => {
           text: data.text || '',
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
           read: data.read || false,
+          readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
           voiceUrl: data.voiceUrl,
@@ -372,7 +383,9 @@ export const useChat = (currentUser: User) => {
           text: data.text || '',
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
           read: data.read || false,
+          readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
           voiceUrl: data.voiceUrl,
@@ -434,7 +447,9 @@ export const useChat = (currentUser: User) => {
           text: data.text || '',
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
           read: data.read || false,
+          readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
           voiceUrl: data.voiceUrl,
@@ -460,17 +475,28 @@ export const useChat = (currentUser: User) => {
           setMessages(prev => prev.filter(msg => msg.id !== message.id));
         }
 
-        // Mark unread messages as read
-        if (message.sender !== currentUser && !message.read) {
-          pendingMessagesToMarkReadRef.current.add(message.id);
-          
-          if (markReadTimeoutRef.current) {
-            clearTimeout(markReadTimeoutRef.current);
+        // Handle delivery and read receipts
+        if (message.sender !== currentUser) {
+          // Mark as delivered when message reaches recipient's device
+          if (!message.delivered) {
+            const messageRef = doc(db, 'messages', message.id);
+            updateDoc(messageRef, { delivered: true }).catch(error => {
+              console.error('Error marking message as delivered:', error);
+            });
           }
           
-          markReadTimeoutRef.current = setTimeout(() => {
-            batchMarkMessagesAsRead();
-          }, 500);
+          // Only mark as read if recipient is online and message is not already read
+          if (!message.read && isOnlineRef.current) {
+            pendingMessagesToMarkReadRef.current.add(message.id);
+            
+            if (markReadTimeoutRef.current) {
+              clearTimeout(markReadTimeoutRef.current);
+            }
+            
+            markReadTimeoutRef.current = setTimeout(() => {
+              batchMarkMessagesAsRead();
+            }, 500);
+          }
         }
       });
     }, (error) => {
@@ -489,6 +515,7 @@ export const useChat = (currentUser: User) => {
         text,
         sender: currentUser,
         timestamp: serverTimestamp(),
+        delivered: false,
         read: false
       };
 
@@ -518,6 +545,7 @@ export const useChat = (currentUser: User) => {
         text: '🎤 Voice message',
         sender: currentUser,
         timestamp: serverTimestamp(),
+        delivered: false,
         read: false,
         voiceUrl
       });
@@ -600,7 +628,9 @@ export const useChat = (currentUser: User) => {
           text: data.text || '',
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
           read: data.read || false,
+          readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
           voiceUrl: data.voiceUrl,
@@ -658,7 +688,9 @@ export const useChat = (currentUser: User) => {
                   text: data.text || '',
                   sender: data.sender,
                   timestamp: data.timestamp?.toDate() || new Date(),
+                  delivered: data.delivered || false,
                   read: data.read || false,
+                  readAt: data.readAt?.toDate(),
                   replyTo: data.replyTo,
                   edited: data.edited || false,
                   voiceUrl: data.voiceUrl,
@@ -758,7 +790,9 @@ export const useChat = (currentUser: User) => {
           text: data.text || '',
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
           read: data.read || false,
+          readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
           voiceUrl: data.voiceUrl,
