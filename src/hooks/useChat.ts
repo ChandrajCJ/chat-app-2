@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType, PaginationState } from '../types';
@@ -274,7 +274,7 @@ export const useChat = (currentUser: User) => {
   }, [currentUser]);
 
   // Load initial messages with pagination
-  const loadInitialMessages = useCallback(async () => {
+  const loadInitialMessages = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       const messagesRef = collection(db, 'messages');
@@ -345,6 +345,8 @@ export const useChat = (currentUser: User) => {
     } catch (error) {
       console.error('Error loading initial messages:', error);
       setLoading(false);
+      // Re-throw to let the caller know there was an error
+      throw error;
     }
   }, [currentUser, batchMarkMessagesAsRead]);
 
@@ -432,14 +434,37 @@ export const useChat = (currentUser: User) => {
 
   // Real-time listener for new messages only (latest)
   useEffect(() => {
+    let isInitialLoadComplete = false;
+    let latestTimestamp: Date | null = null;
+    
     // Initial load
-    loadInitialMessages();
+    loadInitialMessages()
+      .then(() => {
+        isInitialLoadComplete = true;
+        // Set the latest timestamp from loaded messages to filter real-time updates
+        setMessages(prev => {
+          if (prev.length > 0) {
+            latestTimestamp = prev[prev.length - 1].timestamp;
+          }
+          return prev;
+        });
+      })
+      .catch((error) => {
+        console.error('Error in initial load, but continuing with real-time listener:', error);
+        // Still allow real-time listener to work even if initial load fails
+        isInitialLoadComplete = true;
+      });
 
     // Listen for all message changes in real-time (new messages, reactions, edits)
     const messagesRef = collection(db, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Skip processing until initial load is complete to avoid duplicates
+      if (!isInitialLoadComplete) {
+        return;
+      }
+
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data();
         const message = {
@@ -457,14 +482,22 @@ export const useChat = (currentUser: User) => {
         } as Message;
 
         if (change.type === 'added') {
-          // New message added
-          setMessages(prev => {
-            const isNewMessage = !prev.some(msg => msg.id === message.id);
-            if (isNewMessage) {
-              return [...prev, message];
-            }
-            return prev;
-          });
+          // Only add messages that are newer than our latest loaded timestamp
+          // or if we don't have a timestamp reference yet
+          const shouldAddMessage = !latestTimestamp || 
+            message.timestamp > latestTimestamp;
+            
+          if (shouldAddMessage) {
+            setMessages(prev => {
+              const isNewMessage = !prev.some(msg => msg.id === message.id);
+              if (isNewMessage) {
+                // Update latest timestamp
+                latestTimestamp = message.timestamp;
+                return [...prev, message];
+              }
+              return prev;
+            });
+          }
         } else if (change.type === 'modified') {
           // Message updated (reaction, edit, etc.)
           setMessages(prev => 
