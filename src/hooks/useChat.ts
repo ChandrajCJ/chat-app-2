@@ -42,16 +42,36 @@ export const useChat = (currentUser: User) => {
 
   // Heartbeat function to maintain online status
   const sendHeartbeat = useCallback(async () => {
-    if (document.hidden || !isOnlineRef.current) return;
+    // Only send heartbeat if tab is visible and user should be online
+    if (document.hidden || !isOnlineRef.current) {
+      // If tab is hidden, mark as offline
+      if (document.hidden && isOnlineRef.current) {
+        isOnlineRef.current = false;
+        try {
+          const userStatusRef = doc(db, 'status', currentUser);
+          await updateDoc(userStatusRef, {
+            lastSeen: serverTimestamp(),
+            isOnline: false,
+            isTyping: false
+          });
+        } catch (error) {
+          console.error('Error updating offline status in heartbeat:', error);
+        }
+      }
+      return;
+    }
     
     try {
       const userStatusRef = doc(db, 'status', currentUser);
       await updateDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
-        isOnline: true
+        isOnline: true,
+        isTyping: isTypingRef.current // Maintain current typing status
       });
     } catch (error) {
       console.error('Error sending heartbeat:', error);
+      // If heartbeat fails, we might be offline
+      isOnlineRef.current = false;
     }
   }, [currentUser]);
 
@@ -90,8 +110,8 @@ export const useChat = (currentUser: User) => {
     isOnlineRef.current = true;
     updateStatusImmediately({ isOnline: true, isTyping: false });
 
-    // Start heartbeat to maintain online status (every 30 seconds)
-    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+    // Start heartbeat to maintain online status (every 15 seconds for better accuracy)
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -109,7 +129,7 @@ export const useChat = (currentUser: User) => {
         updateStatusImmediately({ isOnline: true, isTyping: false });
         
         // Restart heartbeat
-        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
       }
     };
 
@@ -121,7 +141,7 @@ export const useChat = (currentUser: User) => {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
       }
-      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
     };
 
     const handleBlur = () => {
@@ -183,12 +203,12 @@ export const useChat = (currentUser: User) => {
         const data = doc.data();
         const lastSeen = data.lastSeen?.toDate() || new Date();
         
-        // Consider user offline if last seen is more than 2 minutes ago
-        const isRecentlyActive = (new Date().getTime() - lastSeen.getTime()) < 120000; // 2 minutes
+        // Consider user offline if last seen is more than 45 seconds ago (3x heartbeat interval)
+        const isRecentlyActive = (new Date().getTime() - lastSeen.getTime()) < 45000; // 45 seconds
         
         newStatuses[user] = {
           lastSeen,
-          isOnline: data.isOnline && isRecentlyActive,
+          isOnline: Boolean(data.isOnline && isRecentlyActive),
           isTyping: data.isTyping || false
         };
       });
