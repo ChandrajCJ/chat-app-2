@@ -455,7 +455,7 @@ export const useChat = (currentUser: User) => {
         isInitialLoadComplete = true;
       });
 
-    // Listen for all message changes in real-time (new messages, reactions, edits)
+    // Listen for all message changes in real-time (new messages, reactions, edits, read receipts)
     const messagesRef = collection(db, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
@@ -499,7 +499,7 @@ export const useChat = (currentUser: User) => {
             });
           }
         } else if (change.type === 'modified') {
-          // Message updated (reaction, edit, etc.)
+          // Message updated (reaction, edit, read receipt, etc.)
           setMessages(prev => 
             prev.map(msg => msg.id === message.id ? message : msg)
           );
@@ -508,7 +508,7 @@ export const useChat = (currentUser: User) => {
           setMessages(prev => prev.filter(msg => msg.id !== message.id));
         }
 
-        // Handle delivery and read receipts
+        // Handle delivery and read receipts for incoming messages
         if (message.sender !== currentUser) {
           // Mark as delivered when message reaches recipient's device
           if (!message.delivered) {
