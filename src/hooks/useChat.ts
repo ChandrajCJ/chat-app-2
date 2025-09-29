@@ -32,6 +32,11 @@ export const useChat = (currentUser: User) => {
   const isInitializedRef = useRef<boolean>(false);
   const lastHeartbeatRef = useRef<number>(0);
   const connectionStateRef = useRef<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
+  
+  // Add flag to prevent multiple simultaneous listener setups
+  const isSettingUpListenerRef = useRef<boolean>(false);
+  const processedMessageIds = useRef<Set<string>>(new Set());
+  const processedMessageCleanupRef = useRef<NodeJS.Timeout>();
 
   // Immediate status update function (no debouncing for critical updates)
   const updateStatusImmediately = useCallback(async (updates: any) => {
@@ -69,6 +74,9 @@ export const useChat = (currentUser: User) => {
         messageListenerRef.current();
         messageListenerRef.current = null;
       }
+      
+      // Reset listener setup flag before restarting
+      isSettingUpListenerRef.current = false;
       
       // Restart real-time listeners
       setupMessageListener();
@@ -165,13 +173,22 @@ export const useChat = (currentUser: User) => {
     }
   }, [handleConnectionRecovery]);
 
-  // Setup message listener with enhanced error handling
+  // Setup message listener with enhanced error handling and duplicate prevention
   const setupMessageListener = useCallback(() => {
+    // Prevent multiple simultaneous listener setups
+    if (isSettingUpListenerRef.current) {
+      console.log('⏸️ Message listener setup already in progress, skipping...');
+      return null;
+    }
+
+    // Clean up existing listener first
     if (messageListenerRef.current) {
+      console.log('🧹 Cleaning up existing message listener...');
       messageListenerRef.current();
       messageListenerRef.current = null;
     }
 
+    isSettingUpListenerRef.current = true;
     console.log('🔄 Setting up message listener...');
     
     const messagesRef = collection(db, 'messages');
@@ -181,9 +198,18 @@ export const useChat = (currentUser: User) => {
       console.log(`📨 Message snapshot received: ${snapshot.docChanges().length} changes`);
       
       snapshot.docChanges().forEach((change) => {
+        const messageId = change.doc.id;
+        
+        // Enhanced duplicate prevention - skip if already processed in this session
+        const changeKey = `${messageId}-${change.type}`;
+        if (change.type === 'added' && processedMessageIds.current.has(changeKey)) {
+          console.log(`⏩ Skipping duplicate message: ${messageId}`);
+          return;
+        }
+
         const data = change.doc.data();
         const message = {
-          id: change.doc.id,
+          id: messageId,
           text: data.text || '',
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
@@ -197,6 +223,9 @@ export const useChat = (currentUser: User) => {
         } as Message;
 
         if (change.type === 'added') {
+          // Mark as processed to prevent duplicates
+          processedMessageIds.current.add(changeKey);
+          
           // Only add messages that are newer than our latest loaded timestamp
           // or if we don't have a timestamp reference yet
           setMessages(prev => {
@@ -204,8 +233,10 @@ export const useChat = (currentUser: User) => {
             if (isNewMessage) {
               console.log(`➕ Adding new message from ${message.sender}`);
               return [...prev, message];
+            } else {
+              console.log(`⏩ Message ${messageId} already exists, skipping`);
+              return prev;
             }
-            return prev;
           });
         } else if (change.type === 'modified') {
           // Message updated (reaction, edit, read receipt, etc.)
@@ -217,6 +248,8 @@ export const useChat = (currentUser: User) => {
           // Message deleted
           console.log(`🗑️ Removing message ${message.id}`);
           setMessages(prev => prev.filter(msg => msg.id !== message.id));
+          // Remove from processed set when message is deleted
+          processedMessageIds.current.delete(`${messageId}-added`);
         }
 
         // Handle delivery and read receipts for incoming messages
@@ -249,12 +282,16 @@ export const useChat = (currentUser: User) => {
     }, (error) => {
       console.error('❌ Message listener error:', error);
       connectionStateRef.current = 'disconnected';
+      isSettingUpListenerRef.current = false;
       
       // Attempt to reconnect
       handleConnectionRecovery();
     });
 
     messageListenerRef.current = unsubscribe;
+    isSettingUpListenerRef.current = false;
+    console.log('✅ Message listener setup completed');
+    
     return unsubscribe;
   }, [currentUser, batchMarkMessagesAsRead, handleConnectionRecovery]);
 
@@ -317,6 +354,17 @@ export const useChat = (currentUser: User) => {
     // Start heartbeat to maintain online status (every 10 seconds for better accuracy)
     heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
 
+    // Start periodic cleanup of processed message IDs (every 5 minutes)
+    processedMessageCleanupRef.current = setInterval(() => {
+      // Clear processed IDs older than 10 minutes to prevent memory growth
+      // Keep the set reasonably sized while preventing recent duplicates
+      const currentSize = processedMessageIds.current.size;
+      if (currentSize > 1000) {
+        console.log(`🧹 Cleaning up processed message IDs (${currentSize} entries)`);
+        processedMessageIds.current.clear();
+      }
+    }, 5 * 60 * 1000);
+
     // Enhanced visibility change handler
     const handleVisibilityChange = () => {
       console.log(`👁️ Visibility changed: ${document.hidden ? 'hidden' : 'visible'}`);
@@ -349,10 +397,14 @@ export const useChat = (currentUser: User) => {
         sendHeartbeat();
         heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
         
-        // Restart listeners for real-time updates
+        // Restart listeners for real-time updates with consolidated call
         setTimeout(() => {
-          setupMessageListener();
-          setupStatusListener();
+          if (!messageListenerRef.current && !isSettingUpListenerRef.current) {
+            setupMessageListener();
+          }
+          if (!statusListenerRef.current) {
+            setupStatusListener();
+          }
         }, 100);
         
         // Force connection recovery to ensure we're properly connected
@@ -372,8 +424,8 @@ export const useChat = (currentUser: User) => {
       sendHeartbeat();
       heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
       
-      // Ensure listeners are active
-      if (!messageListenerRef.current) {
+      // Ensure listeners are active (with duplicate prevention)
+      if (!messageListenerRef.current && !isSettingUpListenerRef.current) {
         setupMessageListener();
       }
       if (!statusListenerRef.current) {
@@ -476,6 +528,13 @@ export const useChat = (currentUser: User) => {
       if (reconnectionTimeoutRef.current) {
         clearTimeout(reconnectionTimeoutRef.current);
       }
+      if (processedMessageCleanupRef.current) {
+        clearInterval(processedMessageCleanupRef.current);
+      }
+
+      // Reset listener flags and processed messages
+      isSettingUpListenerRef.current = false;
+      processedMessageIds.current.clear();
 
       // Final offline status update
       isOnlineRef.current = false;
@@ -689,34 +748,23 @@ export const useChat = (currentUser: User) => {
 
   // Real-time listener for new messages only (latest)
   useEffect(() => {
-    let isInitialLoadComplete = false;
-    let latestTimestamp: Date | null = null;
-    
     // Initial load
     loadInitialMessages()
       .then(() => {
-        isInitialLoadComplete = true;
-        // Set the latest timestamp from loaded messages to filter real-time updates
-        setMessages(prev => {
-          if (prev.length > 0) {
-            latestTimestamp = prev[prev.length - 1].timestamp;
-          }
-          return prev;
-        });
-        
-        // Setup message listener after initial load
+        // Setup message listener after initial load (with duplicate prevention)
         setTimeout(() => {
-          setupMessageListener();
+          if (!messageListenerRef.current && !isSettingUpListenerRef.current) {
+            setupMessageListener();
+          }
         }, 100);
       })
       .catch((error) => {
         console.error('Error in initial load, but continuing with real-time listener:', error);
-        // Still allow real-time listener to work even if initial load fails
-        isInitialLoadComplete = true;
-        
-        // Setup message listener even if initial load fails
+        // Setup message listener even if initial load fails (with duplicate prevention)
         setTimeout(() => {
-          setupMessageListener();
+          if (!messageListenerRef.current && !isSettingUpListenerRef.current) {
+            setupMessageListener();
+          }
         }, 100);
       });
 
