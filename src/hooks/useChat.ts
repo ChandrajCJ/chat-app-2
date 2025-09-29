@@ -69,17 +69,17 @@ export const useChat = (currentUser: User) => {
       connectionStateRef.current = 'connected';
       console.log('✅ Connection recovered successfully');
       
-      // Force refresh of message listeners
-      if (messageListenerRef.current) {
-        messageListenerRef.current();
-        messageListenerRef.current = null;
+      // Only restart listeners if there's actually an issue, not on every recovery
+      console.log('🔄 Connection recovered, checking listener status...');
+      
+      // Only restart if listener is actually missing or broken
+      if (!messageListenerRef.current) {
+        console.log('📡 No active message listener, restarting...');
+        isSettingUpListenerRef.current = false;
+        setupMessageListener();
+      } else {
+        console.log('✅ Message listener still active, keeping existing connection');
       }
-      
-      // Reset listener setup flag before restarting
-      isSettingUpListenerRef.current = false;
-      
-      // Restart real-time listeners
-      setupMessageListener();
       
     } catch (error) {
       console.error('❌ Connection recovery failed:', error);
@@ -194,18 +194,25 @@ export const useChat = (currentUser: User) => {
     const messagesRef = collection(db, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
+    console.log(`🎯 Setting up Firebase listener for user: ${currentUser}`);
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       console.log(`📨 Message snapshot received: ${snapshot.docChanges().length} changes`);
+      console.log(`📊 Change types:`, snapshot.docChanges().map(change => ({ id: change.doc.id, type: change.type })));
       
       snapshot.docChanges().forEach((change) => {
         const messageId = change.doc.id;
         
         // Enhanced duplicate prevention - skip if already processed in this session
+        // Note: Only apply to 'added' changes, allow all 'modified' changes for real-time updates
         const changeKey = `${messageId}-${change.type}`;
         if (change.type === 'added' && processedMessageIds.current.has(changeKey)) {
-          console.log(`⏩ Skipping duplicate message: ${messageId}`);
+          console.log(`⏩ Skipping duplicate added message: ${messageId}`);
           return;
         }
+        
+        // Always log what we're processing for debugging
+        console.log(`🔍 Processing ${change.type} change for message ${messageId} from ${change.doc.data().sender}`);
 
         const data = change.doc.data();
         const message = {
@@ -240,10 +247,40 @@ export const useChat = (currentUser: User) => {
           });
         } else if (change.type === 'modified') {
           // Message updated (reaction, edit, read receipt, etc.)
-          console.log(`✏️ Updating message ${message.id} - read: ${message.read}, reaction: ${message.reaction}`);
-          setMessages(prev => 
-            prev.map(msg => msg.id === message.id ? message : msg)
-          );
+          const isReadReceiptUpdate = message.sender === currentUser && message.read && !messages.find(m => m.id === message.id)?.read;
+          
+          if (isReadReceiptUpdate) {
+            console.log(`🔵 READ RECEIPT UPDATE: Message ${message.id} marked as read!`);
+          }
+          
+          console.log(`✏️ Updating message ${message.id} - read: ${message.read}, delivered: ${message.delivered}, reaction: ${message.reaction}`);
+          console.log(`📋 Message update details:`, { 
+            id: message.id, 
+            sender: message.sender, 
+            currentUser,
+            read: message.read,
+            delivered: message.delivered,
+            readAt: message.readAt,
+            isReadReceiptUpdate
+          });
+          
+          setMessages(prev => {
+            const updated = prev.map(msg => {
+              if (msg.id === message.id) {
+                const wasRead = msg.read;
+                const nowRead = message.read;
+                console.log(`🔄 Updating message ${msg.id}: read ${wasRead} -> ${nowRead}, delivered ${msg.delivered} -> ${message.delivered}`);
+                
+                if (!wasRead && nowRead && message.sender === currentUser) {
+                  console.log(`🎉 SUCCESS: Blue tick should now appear for message ${msg.id}!`);
+                }
+                
+                return message;
+              }
+              return msg;
+            });
+            return updated;
+          });
         } else if (change.type === 'removed') {
           // Message deleted
           console.log(`🗑️ Removing message ${message.id}`);
@@ -379,15 +416,10 @@ export const useChat = (currentUser: User) => {
           clearInterval(heartbeatIntervalRef.current);
         }
         
-        // Clean up listeners to prevent stale connections
-        if (messageListenerRef.current) {
-          messageListenerRef.current();
-          messageListenerRef.current = null;
-        }
-        if (statusListenerRef.current) {
-          statusListenerRef.current();
-          statusListenerRef.current = null;
-        }
+        // Don't aggressively clean up listeners on visibility change
+        // This can cause missed real-time updates like read receipts
+        // Firebase handles connection management internally
+        console.log('🌫️ Tab hidden, keeping listeners active for real-time updates');
       } else {
         // Immediately update to online when tab becomes visible
         isOnlineRef.current = true;
@@ -397,18 +429,26 @@ export const useChat = (currentUser: User) => {
         sendHeartbeat();
         heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
         
-        // Restart listeners for real-time updates with consolidated call
+        // Only restart listeners if they're actually missing (less aggressive approach)
         setTimeout(() => {
           if (!messageListenerRef.current && !isSettingUpListenerRef.current) {
+            console.log('🔄 Restarting message listener after tab becomes visible');
             setupMessageListener();
+          } else {
+            console.log('✅ Message listener still active after tab visible');
           }
           if (!statusListenerRef.current) {
             setupStatusListener();
           }
         }, 100);
         
-        // Force connection recovery to ensure we're properly connected
-        setTimeout(handleConnectionRecovery, 500);
+        // Reduce frequency of connection recovery checks
+        setTimeout(() => {
+          if (connectionStateRef.current !== 'connected') {
+            console.log('🔄 Connection check after visibility change');
+            handleConnectionRecovery();
+          }
+        }, 1000);
       }
     };
 
