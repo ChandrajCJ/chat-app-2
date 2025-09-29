@@ -18,7 +18,7 @@ export const useChat = (currentUser: User) => {
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
 
-  // Refs for optimization
+  // Refs for optimization and state management
   const statusUpdateTimeoutRef = useRef<NodeJS.Timeout>();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const heartbeatIntervalRef = useRef<NodeJS.Timeout>();
@@ -26,6 +26,12 @@ export const useChat = (currentUser: User) => {
   const markReadTimeoutRef = useRef<NodeJS.Timeout>();
   const isTypingRef = useRef<boolean>(false);
   const isOnlineRef = useRef<boolean>(false);
+  const reconnectionTimeoutRef = useRef<NodeJS.Timeout>();
+  const messageListenerRef = useRef<(() => void) | null>(null);
+  const statusListenerRef = useRef<(() => void) | null>(null);
+  const isInitializedRef = useRef<boolean>(false);
+  const lastHeartbeatRef = useRef<number>(0);
+  const connectionStateRef = useRef<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
 
   // Immediate status update function (no debouncing for critical updates)
   const updateStatusImmediately = useCallback(async (updates: any) => {
@@ -35,12 +41,51 @@ export const useChat = (currentUser: User) => {
         ...updates,
         lastSeen: serverTimestamp()
       }, { merge: true });
+      lastHeartbeatRef.current = Date.now();
     } catch (error) {
       console.error('Error updating status immediately:', error);
+      connectionStateRef.current = 'disconnected';
     }
   }, [currentUser]);
 
-  // Heartbeat function to maintain online status
+  // Enhanced connection recovery function
+  const handleConnectionRecovery = useCallback(async () => {
+    console.log('🔄 Attempting connection recovery...');
+    connectionStateRef.current = 'reconnecting';
+    
+    try {
+      // Force immediate status update to test connection
+      await updateStatusImmediately({ 
+        isOnline: true, 
+        isTyping: isTypingRef.current,
+        reconnectedAt: serverTimestamp()
+      });
+      
+      connectionStateRef.current = 'connected';
+      console.log('✅ Connection recovered successfully');
+      
+      // Force refresh of message listeners
+      if (messageListenerRef.current) {
+        messageListenerRef.current();
+        messageListenerRef.current = null;
+      }
+      
+      // Restart real-time listeners
+      setupMessageListener();
+      
+    } catch (error) {
+      console.error('❌ Connection recovery failed:', error);
+      connectionStateRef.current = 'disconnected';
+      
+      // Retry connection recovery after delay
+      if (reconnectionTimeoutRef.current) {
+        clearTimeout(reconnectionTimeoutRef.current);
+      }
+      reconnectionTimeoutRef.current = setTimeout(handleConnectionRecovery, 3000);
+    }
+  }, [updateStatusImmediately, currentUser]);
+
+  // Enhanced heartbeat function with connection monitoring
   const sendHeartbeat = useCallback(async () => {
     // Only send heartbeat if tab is visible and user should be online
     if (document.hidden || !isOnlineRef.current) {
@@ -68,19 +113,31 @@ export const useChat = (currentUser: User) => {
         isOnline: true,
         isTyping: isTypingRef.current // Maintain current typing status
       });
+      
+      lastHeartbeatRef.current = Date.now();
+      
+      // If we were disconnected, mark as connected
+      if (connectionStateRef.current !== 'connected') {
+        connectionStateRef.current = 'connected';
+        console.log('✅ Heartbeat successful - connection restored');
+      }
     } catch (error) {
       console.error('Error sending heartbeat:', error);
+      connectionStateRef.current = 'disconnected';
       // If heartbeat fails, we might be offline
       isOnlineRef.current = false;
+      
+      // Attempt connection recovery
+      handleConnectionRecovery();
     }
-  }, [currentUser]);
+  }, [currentUser, handleConnectionRecovery]);
 
-  // Batch mark messages as read
+  // Batch mark messages as read with enhanced error handling
   const batchMarkMessagesAsRead = useCallback(async () => {
     if (pendingMessagesToMarkReadRef.current.size === 0) return;
     
-    // Only mark as read if user is actually online
-    if (!isOnlineRef.current) {
+    // Only mark as read if user is actually online and connected
+    if (!isOnlineRef.current || connectionStateRef.current !== 'connected') {
       return;
     }
 
@@ -99,21 +156,171 @@ export const useChat = (currentUser: User) => {
 
       await batch.commit();
       pendingMessagesToMarkReadRef.current.clear();
+      console.log(`✅ Marked ${messageIds.length} messages as read`);
     } catch (error) {
       console.error('Error batch marking messages as read:', error);
+      // Don't clear pending messages on error - retry later
+      connectionStateRef.current = 'disconnected';
+      handleConnectionRecovery();
     }
-  }, []);
+  }, [handleConnectionRecovery]);
 
-  // Handle user status with improved accuracy
+  // Setup message listener with enhanced error handling
+  const setupMessageListener = useCallback(() => {
+    if (messageListenerRef.current) {
+      messageListenerRef.current();
+      messageListenerRef.current = null;
+    }
+
+    console.log('🔄 Setting up message listener...');
+    
+    const messagesRef = collection(db, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log(`📨 Message snapshot received: ${snapshot.docChanges().length} changes`);
+      
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+        const message = {
+          id: change.doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
+          read: data.read || false,
+          readAt: data.readAt?.toDate(),
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction
+        } as Message;
+
+        if (change.type === 'added') {
+          // Only add messages that are newer than our latest loaded timestamp
+          // or if we don't have a timestamp reference yet
+          setMessages(prev => {
+            const isNewMessage = !prev.some(msg => msg.id === message.id);
+            if (isNewMessage) {
+              console.log(`➕ Adding new message from ${message.sender}`);
+              return [...prev, message];
+            }
+            return prev;
+          });
+        } else if (change.type === 'modified') {
+          // Message updated (reaction, edit, read receipt, etc.)
+          console.log(`✏️ Updating message ${message.id} - read: ${message.read}, reaction: ${message.reaction}`);
+          setMessages(prev => 
+            prev.map(msg => msg.id === message.id ? message : msg)
+          );
+        } else if (change.type === 'removed') {
+          // Message deleted
+          console.log(`🗑️ Removing message ${message.id}`);
+          setMessages(prev => prev.filter(msg => msg.id !== message.id));
+        }
+
+        // Handle delivery and read receipts for incoming messages
+        if (message.sender !== currentUser) {
+          // Mark as delivered when message reaches recipient's device
+          if (!message.delivered) {
+            const messageRef = doc(db, 'messages', message.id);
+            updateDoc(messageRef, { delivered: true }).catch(error => {
+              console.error('Error marking message as delivered:', error);
+            });
+          }
+          
+          // Only mark as read if recipient is online, connected, and message is not already read
+          if (!message.read && isOnlineRef.current && connectionStateRef.current === 'connected') {
+            pendingMessagesToMarkReadRef.current.add(message.id);
+            
+            if (markReadTimeoutRef.current) {
+              clearTimeout(markReadTimeoutRef.current);
+            }
+            
+            markReadTimeoutRef.current = setTimeout(() => {
+              batchMarkMessagesAsRead();
+            }, 300); // Reduced timeout for faster read receipts
+          }
+        }
+      });
+      
+      // Mark connection as healthy when we receive updates
+      connectionStateRef.current = 'connected';
+    }, (error) => {
+      console.error('❌ Message listener error:', error);
+      connectionStateRef.current = 'disconnected';
+      
+      // Attempt to reconnect
+      handleConnectionRecovery();
+    });
+
+    messageListenerRef.current = unsubscribe;
+    return unsubscribe;
+  }, [currentUser, batchMarkMessagesAsRead, handleConnectionRecovery]);
+
+  // Setup status listener with enhanced error handling
+  const setupStatusListener = useCallback(() => {
+    if (statusListenerRef.current) {
+      statusListenerRef.current();
+      statusListenerRef.current = null;
+    }
+
+    console.log('🔄 Setting up status listener...');
+    
+    const statusRef = collection(db, 'status');
+    const unsubscribe = onSnapshot(statusRef, (snapshot) => {
+      console.log(`👥 Status snapshot received: ${snapshot.docs.length} users`);
+      
+      const newStatuses = { ...userStatuses };
+      
+      snapshot.docs.forEach((doc) => {
+        const user = doc.id as User;
+        const data = doc.data();
+        const lastSeen = data.lastSeen?.toDate() || new Date();
+        
+        // Consider user offline if last seen is more than 30 seconds ago (2x heartbeat interval)
+        const isRecentlyActive = (new Date().getTime() - lastSeen.getTime()) < 30000; // 30 seconds
+        
+        newStatuses[user] = {
+          lastSeen,
+          isOnline: Boolean(data.isOnline && isRecentlyActive),
+          isTyping: data.isTyping || false
+        };
+        
+        console.log(`👤 ${user}: online=${newStatuses[user].isOnline}, typing=${newStatuses[user].isTyping}`);
+      });
+      
+      setUserStatuses(newStatuses);
+    }, (error) => {
+      console.error('❌ Status listener error:', error);
+      connectionStateRef.current = 'disconnected';
+      
+      // Attempt to reconnect
+      handleConnectionRecovery();
+    });
+
+    statusListenerRef.current = unsubscribe;
+    return unsubscribe;
+  }, [userStatuses, handleConnectionRecovery]);
+
+  // Handle user status with improved accuracy and connection recovery
   useEffect(() => {
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+    
+    console.log('🚀 Initializing chat connection...');
+    
     // Set initial online status immediately
     isOnlineRef.current = true;
     updateStatusImmediately({ isOnline: true, isTyping: false });
 
-    // Start heartbeat to maintain online status (every 15 seconds for better accuracy)
-    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
+    // Start heartbeat to maintain online status (every 10 seconds for better accuracy)
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
 
+    // Enhanced visibility change handler
     const handleVisibilityChange = () => {
+      console.log(`👁️ Visibility changed: ${document.hidden ? 'hidden' : 'visible'}`);
+      
       if (document.hidden) {
         // Immediately update to offline when tab becomes hidden
         isOnlineRef.current = false;
@@ -123,17 +330,38 @@ export const useChat = (currentUser: User) => {
         if (heartbeatIntervalRef.current) {
           clearInterval(heartbeatIntervalRef.current);
         }
+        
+        // Clean up listeners to prevent stale connections
+        if (messageListenerRef.current) {
+          messageListenerRef.current();
+          messageListenerRef.current = null;
+        }
+        if (statusListenerRef.current) {
+          statusListenerRef.current();
+          statusListenerRef.current = null;
+        }
       } else {
         // Immediately update to online when tab becomes visible
         isOnlineRef.current = true;
         updateStatusImmediately({ isOnline: true, isTyping: false });
         
-        // Restart heartbeat
-        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
+        // Restart heartbeat with immediate first beat
+        sendHeartbeat();
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
+        
+        // Restart listeners for real-time updates
+        setTimeout(() => {
+          setupMessageListener();
+          setupStatusListener();
+        }, 100);
+        
+        // Force connection recovery to ensure we're properly connected
+        setTimeout(handleConnectionRecovery, 500);
       }
     };
 
     const handleFocus = () => {
+      console.log('🎯 Window focused');
       isOnlineRef.current = true;
       updateStatusImmediately({ isOnline: true });
       
@@ -141,15 +369,26 @@ export const useChat = (currentUser: User) => {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
       }
-      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
+      sendHeartbeat();
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 10000);
+      
+      // Ensure listeners are active
+      if (!messageListenerRef.current) {
+        setupMessageListener();
+      }
+      if (!statusListenerRef.current) {
+        setupStatusListener();
+      }
     };
 
     const handleBlur = () => {
       // Don't immediately go offline on blur, wait for visibility change
       // This prevents false offline status when clicking outside the window
+      console.log('🌫️ Window blurred');
     };
 
     const handleBeforeUnload = () => {
+      console.log('👋 Page unloading - marking offline');
       // Use navigator.sendBeacon for more reliable offline status update
       isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
@@ -176,13 +415,17 @@ export const useChat = (currentUser: User) => {
     };
 
     const handleOnline = () => {
+      console.log('🌐 Network online');
       isOnlineRef.current = true;
       updateStatusImmediately({ isOnline: true });
+      handleConnectionRecovery();
     };
 
     const handleOffline = () => {
+      console.log('📵 Network offline');
       isOnlineRef.current = false;
       updateStatusImmediately({ isOnline: false, isTyping: false });
+      connectionStateRef.current = 'disconnected';
     };
 
     // Add multiple event listeners for better detection
@@ -193,32 +436,12 @@ export const useChat = (currentUser: User) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Listen to status changes with real-time updates
-    const statusRef = collection(db, 'status');
-    const unsubscribeStatus = onSnapshot(statusRef, (snapshot) => {
-      const newStatuses = { ...userStatuses };
-      
-      snapshot.docs.forEach((doc) => {
-        const user = doc.id as User;
-        const data = doc.data();
-        const lastSeen = data.lastSeen?.toDate() || new Date();
-        
-        // Consider user offline if last seen is more than 45 seconds ago (3x heartbeat interval)
-        const isRecentlyActive = (new Date().getTime() - lastSeen.getTime()) < 45000; // 45 seconds
-        
-        newStatuses[user] = {
-          lastSeen,
-          isOnline: Boolean(data.isOnline && isRecentlyActive),
-          isTyping: data.isTyping || false
-        };
-      });
-      
-      setUserStatuses(newStatuses);
-    }, (error) => {
-      console.error('Error listening to status updates:', error);
-    });
+    // Setup initial listeners
+    setupStatusListener();
 
     return () => {
+      console.log('🧹 Cleaning up chat connection...');
+      
       // Cleanup
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
@@ -226,7 +449,16 @@ export const useChat = (currentUser: User) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      unsubscribeStatus();
+      
+      // Clean up listeners
+      if (statusListenerRef.current) {
+        statusListenerRef.current();
+        statusListenerRef.current = null;
+      }
+      if (messageListenerRef.current) {
+        messageListenerRef.current();
+        messageListenerRef.current = null;
+      }
       
       // Clear intervals and timeouts
       if (heartbeatIntervalRef.current) {
@@ -241,6 +473,9 @@ export const useChat = (currentUser: User) => {
       if (markReadTimeoutRef.current) {
         clearTimeout(markReadTimeoutRef.current);
       }
+      if (reconnectionTimeoutRef.current) {
+        clearTimeout(reconnectionTimeoutRef.current);
+      }
 
       // Final offline status update
       isOnlineRef.current = false;
@@ -253,7 +488,7 @@ export const useChat = (currentUser: User) => {
         // Ignore errors during cleanup
       });
     };
-  }, [currentUser, updateStatusImmediately, sendHeartbeat]);
+  }, [currentUser, updateStatusImmediately, sendHeartbeat, setupStatusListener, handleConnectionRecovery]);
 
   // Improved typing indicator with faster response
   const setTypingStatus = useCallback(async (isTyping: boolean) => {
@@ -360,7 +595,7 @@ export const useChat = (currentUser: User) => {
         
         markReadTimeoutRef.current = setTimeout(() => {
           batchMarkMessagesAsRead();
-        }, 500);
+        }, 300);
       }
     } catch (error) {
       console.error('Error loading initial messages:', error);
@@ -444,7 +679,7 @@ export const useChat = (currentUser: User) => {
         
         markReadTimeoutRef.current = setTimeout(() => {
           batchMarkMessagesAsRead();
-        }, 500);
+        }, 300);
       }
     } catch (error) {
       console.error('Error loading more messages:', error);
@@ -468,96 +703,27 @@ export const useChat = (currentUser: User) => {
           }
           return prev;
         });
+        
+        // Setup message listener after initial load
+        setTimeout(() => {
+          setupMessageListener();
+        }, 100);
       })
       .catch((error) => {
         console.error('Error in initial load, but continuing with real-time listener:', error);
         // Still allow real-time listener to work even if initial load fails
         isInitialLoadComplete = true;
+        
+        // Setup message listener even if initial load fails
+        setTimeout(() => {
+          setupMessageListener();
+        }, 100);
       });
 
-    // Listen for all message changes in real-time (new messages, reactions, edits, read receipts)
-    const messagesRef = collection(db, 'messages');
-    const q = query(messagesRef, orderBy('timestamp', 'desc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Skip processing until initial load is complete to avoid duplicates
-      if (!isInitialLoadComplete) {
-        return;
-      }
-
-      snapshot.docChanges().forEach((change) => {
-        const data = change.doc.data();
-        const message = {
-          id: change.doc.id,
-          text: data.text || '',
-          sender: data.sender,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          delivered: data.delivered || false,
-          read: data.read || false,
-          readAt: data.readAt?.toDate(),
-          replyTo: data.replyTo,
-          edited: data.edited || false,
-          voiceUrl: data.voiceUrl,
-          reaction: data.reaction
-        } as Message;
-
-        if (change.type === 'added') {
-          // Only add messages that are newer than our latest loaded timestamp
-          // or if we don't have a timestamp reference yet
-          const shouldAddMessage = !latestTimestamp || 
-            message.timestamp > latestTimestamp;
-            
-          if (shouldAddMessage) {
-            setMessages(prev => {
-              const isNewMessage = !prev.some(msg => msg.id === message.id);
-              if (isNewMessage) {
-                // Update latest timestamp
-                latestTimestamp = message.timestamp;
-                return [...prev, message];
-              }
-              return prev;
-            });
-          }
-        } else if (change.type === 'modified') {
-          // Message updated (reaction, edit, read receipt, etc.)
-          setMessages(prev => 
-            prev.map(msg => msg.id === message.id ? message : msg)
-          );
-        } else if (change.type === 'removed') {
-          // Message deleted
-          setMessages(prev => prev.filter(msg => msg.id !== message.id));
-        }
-
-        // Handle delivery and read receipts for incoming messages
-        if (message.sender !== currentUser) {
-          // Mark as delivered when message reaches recipient's device
-          if (!message.delivered) {
-            const messageRef = doc(db, 'messages', message.id);
-            updateDoc(messageRef, { delivered: true }).catch(error => {
-              console.error('Error marking message as delivered:', error);
-            });
-          }
-          
-          // Only mark as read if recipient is online and message is not already read
-          if (!message.read && isOnlineRef.current) {
-            pendingMessagesToMarkReadRef.current.add(message.id);
-            
-            if (markReadTimeoutRef.current) {
-              clearTimeout(markReadTimeoutRef.current);
-            }
-            
-            markReadTimeoutRef.current = setTimeout(() => {
-              batchMarkMessagesAsRead();
-            }, 500);
-          }
-        }
-      });
-    }, (error) => {
-      console.error('Error listening to new messages:', error);
-    });
-
-    return () => unsubscribe();
-  }, [currentUser, loadInitialMessages, batchMarkMessagesAsRead]);
+    return () => {
+      // Cleanup handled by setupMessageListener
+    };
+  }, [currentUser, loadInitialMessages, setupMessageListener]);
 
   const sendMessage = async (text: string, replyTo?: Message) => {
     try {
