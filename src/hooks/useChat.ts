@@ -340,7 +340,7 @@ export const useChat = (currentUser: User) => {
       const q = query(
         messagesRef,
         orderBy('timestamp', 'desc'),
-        limit(10) // Reduced to 10 messages for instant loading
+        limit(50) // Load more messages initially to ensure chat history is visible
       );
 
       const snapshot = await getDocs(q);
@@ -378,7 +378,7 @@ export const useChat = (currentUser: User) => {
       setPagination(prev => ({
         ...prev,
         lastVisible: snapshot.docs[snapshot.docs.length - 1],
-        hasMore: snapshot.docs.length === 10, // If we got less than 10, no more messages
+        hasMore: snapshot.docs.length === 50, // If we got less than 50, no more messages
         totalLoaded: snapshot.docs.length
       }));
       setLoading(false);
@@ -495,7 +495,8 @@ export const useChat = (currentUser: User) => {
   useEffect(() => {
     let isInitialLoadComplete = false;
     let latestTimestamp: Date | null = null;
-    
+    let hasProcessedInitialSnapshot = false;
+
     // Initial load
     loadInitialMessages()
       .then(() => {
@@ -519,6 +520,12 @@ export const useChat = (currentUser: User) => {
     const q = query(messagesRef, orderBy('timestamp', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Skip the very first snapshot from the listener as initial load handles it
+      if (!hasProcessedInitialSnapshot) {
+        hasProcessedInitialSnapshot = true;
+        return;
+      }
+
       // Skip processing until initial load is complete to avoid duplicates
       if (!isInitialLoadComplete) {
         return;
