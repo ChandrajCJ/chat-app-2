@@ -104,11 +104,41 @@ export const useChat = (currentUser: User) => {
     }
   }, []);
 
+  // Mark all unread messages from other users as read when user comes online
+  const markUnreadMessagesAsRead = useCallback(() => {
+    if (!isOnlineRef.current) return;
+
+    setMessages(prev => {
+      const unreadMessages = prev.filter(
+        message => message.sender !== currentUser && !message.read
+      );
+
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach(message => {
+          pendingMessagesToMarkReadRef.current.add(message.id);
+        });
+
+        if (markReadTimeoutRef.current) {
+          clearTimeout(markReadTimeoutRef.current);
+        }
+
+        markReadTimeoutRef.current = setTimeout(() => {
+          batchMarkMessagesAsRead();
+        }, 500);
+      }
+
+      return prev;
+    });
+  }, [currentUser, batchMarkMessagesAsRead]);
+
   // Handle user status with improved accuracy
   useEffect(() => {
     // Set initial online status immediately
     isOnlineRef.current = true;
     updateStatusImmediately({ isOnline: true, isTyping: false });
+
+    // Mark unread messages as read when coming online
+    markUnreadMessagesAsRead();
 
     // Start heartbeat to maintain online status (every 15 seconds for better accuracy)
     heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
@@ -118,7 +148,7 @@ export const useChat = (currentUser: User) => {
         // Immediately update to offline when tab becomes hidden
         isOnlineRef.current = false;
         updateStatusImmediately({ isOnline: false, isTyping: false });
-        
+
         // Clear heartbeat when hidden
         if (heartbeatIntervalRef.current) {
           clearInterval(heartbeatIntervalRef.current);
@@ -127,7 +157,10 @@ export const useChat = (currentUser: User) => {
         // Immediately update to online when tab becomes visible
         isOnlineRef.current = true;
         updateStatusImmediately({ isOnline: true, isTyping: false });
-        
+
+        // Mark unread messages as read when tab becomes visible again
+        markUnreadMessagesAsRead();
+
         // Restart heartbeat
         heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
       }
@@ -136,7 +169,10 @@ export const useChat = (currentUser: User) => {
     const handleFocus = () => {
       isOnlineRef.current = true;
       updateStatusImmediately({ isOnline: true });
-      
+
+      // Mark unread messages as read when window gets focus
+      markUnreadMessagesAsRead();
+
       // Restart heartbeat on focus
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
@@ -178,6 +214,9 @@ export const useChat = (currentUser: User) => {
     const handleOnline = () => {
       isOnlineRef.current = true;
       updateStatusImmediately({ isOnline: true });
+
+      // Mark unread messages as read when network comes back online
+      markUnreadMessagesAsRead();
     };
 
     const handleOffline = () => {
@@ -253,7 +292,7 @@ export const useChat = (currentUser: User) => {
         // Ignore errors during cleanup
       });
     };
-  }, [currentUser, updateStatusImmediately, sendHeartbeat]);
+  }, [currentUser, updateStatusImmediately, sendHeartbeat, markUnreadMessagesAsRead]);
 
   // Improved typing indicator with faster response
   const setTypingStatus = useCallback(async (isTyping: boolean) => {
