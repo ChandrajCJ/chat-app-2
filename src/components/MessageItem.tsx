@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, User, ReactionType } from '../types';
 import { format } from 'date-fns';
-import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus } from 'lucide-react';
+import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus, Info } from 'lucide-react';
 
 interface MessageItemProps {
   message: Message;
@@ -105,6 +105,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('Most Used');
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const isOwnMessage = message.sender === currentUser;
   const [pickerPosition, setPickerPosition] = useState<{ right: boolean; hasSpace: boolean; centerAlign?: boolean } | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
@@ -319,6 +320,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
       scrollToMessage(message.replyTo.id);
     }
   };
+
+  const handleShowInfo = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    setShowInfo(true);
+    setShowMenu(false);
+  };
+
+  const handleCloseInfo = () => {
+    setShowInfo(false);
+  };
   
   return (
     <div 
@@ -424,6 +435,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   </button>
                   {showMenu && (
                     <div className="absolute bottom-full right-0 mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 min-w-[120px] z-10 border border-gray-200 dark:border-gray-700 animate-slide-in">
+                      <button
+                        onClick={handleShowInfo}
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
+                      >
+                        <Info size={14} />
+                        Info
+                      </button>
                       <button
                         onClick={startEditing}
                         className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
@@ -578,9 +596,97 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </div>
             )}
           </div>
-          
+
         </div>
       </div>
+
+      {/* Message Info Modal */}
+      {showInfo && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={handleCloseInfo}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                Message Info
+              </h3>
+              <button
+                onClick={handleCloseInfo}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Check size={18} className="text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Sent
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {format(message.timestamp, 'PPpp')}
+                  </div>
+                </div>
+              </div>
+
+              {message.delivered && (
+                <div className="flex items-start gap-3">
+                  <CheckCheck size={18} className="text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Delivered
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {message.deliveredAt ? format(message.deliveredAt, 'PPpp') : 'Unknown'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {message.read && (
+                <div className="flex items-start gap-3">
+                  <CheckCheck size={18} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Read
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {message.readAt ? format(message.readAt, 'PPpp') : 'Unknown'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!message.delivered && (
+                <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  Message not yet delivered
+                </div>
+              )}
+
+              {message.delivered && !message.read && (
+                <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  Message not yet read
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleCloseInfo}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -365,6 +365,7 @@ export const useChat = (currentUser: User) => {
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
           delivered: data.delivered || false,
+          deliveredAt: data.deliveredAt?.toDate(),
           read: data.read || false,
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
@@ -445,6 +446,7 @@ export const useChat = (currentUser: User) => {
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
           delivered: data.delivered || false,
+          deliveredAt: data.deliveredAt?.toDate(),
           read: data.read || false,
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
@@ -539,6 +541,7 @@ export const useChat = (currentUser: User) => {
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
           delivered: data.delivered || false,
+          deliveredAt: data.deliveredAt?.toDate(),
           read: data.read || false,
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
@@ -579,7 +582,10 @@ export const useChat = (currentUser: User) => {
           // Mark as delivered when message reaches recipient's device
           if (!message.delivered) {
             const messageRef = doc(db, 'messages', message.id);
-            updateDoc(messageRef, { delivered: true }).catch(error => {
+            updateDoc(messageRef, {
+              delivered: true,
+              deliveredAt: serverTimestamp()
+            }).catch(error => {
               console.error('Error marking message as delivered:', error);
             });
           }
@@ -728,6 +734,7 @@ export const useChat = (currentUser: User) => {
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
           delivered: data.delivered || false,
+          deliveredAt: data.deliveredAt?.toDate(),
           read: data.read || false,
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
@@ -788,6 +795,7 @@ export const useChat = (currentUser: User) => {
                   sender: data.sender,
                   timestamp: data.timestamp?.toDate() || new Date(),
                   delivered: data.delivered || false,
+                  deliveredAt: data.deliveredAt?.toDate(),
                   read: data.read || false,
                   readAt: data.readAt?.toDate(),
                   replyTo: data.replyTo,
@@ -890,6 +898,7 @@ export const useChat = (currentUser: User) => {
           sender: data.sender,
           timestamp: data.timestamp?.toDate() || new Date(),
           delivered: data.delivered || false,
+          deliveredAt: data.deliveredAt?.toDate(),
           read: data.read || false,
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,

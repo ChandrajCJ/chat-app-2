@@ -8,6 +8,7 @@ export interface Message {
   sender: User;
   timestamp: Date;
   delivered?: boolean; // Message reached recipient's device/browser
+  deliveredAt?: Date; // When the message was delivered
   read?: boolean; // Message read by recipient (only when online)
   readAt?: Date; // When the message was read
   replyTo?: {
