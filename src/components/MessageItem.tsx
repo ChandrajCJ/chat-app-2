@@ -643,7 +643,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
                       Delivered
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {message.deliveredAt ? format(message.deliveredAt, 'PPpp') : 'Unknown'}
+                      {message.deliveredAt
+                        ? format(message.deliveredAt, 'PPpp')
+                        : format(message.timestamp, 'PPpp')}
                     </div>
                   </div>
                 </div>
@@ -657,7 +659,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
                       Read
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {message.readAt ? format(message.readAt, 'PPpp') : 'Unknown'}
+                      {message.readAt
+                        ? format(message.readAt, 'PPpp')
+                        : message.deliveredAt
+                        ? format(message.deliveredAt, 'PPpp')
+                        : format(message.timestamp, 'PPpp')}
                     </div>
                   </div>
                 </div>
