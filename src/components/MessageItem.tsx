@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, User, ReactionType } from '../types';
 import { format } from 'date-fns';
-import { CheckCheck, Check, Reply, Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus, Info } from 'lucide-react';
+import { CheckCheck, Check, Reply, CreditCard as Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus, Info } from 'lucide-react';
 
 interface MessageItemProps {
   message: Message;
