@@ -2,6 +2,11 @@ export type User = '🐞' | '🦎';
 
 export type ReactionType = string; // Allow any emoji string for reactions
 
+export interface MessageHistory {
+  text: string;
+  editedAt: Date;
+}
+
 export interface Message {
   id: string;
   text: string;
@@ -17,6 +22,7 @@ export interface Message {
     sender: User;
   };
   edited?: boolean;
+  editHistory?: MessageHistory[]; // Array of previous versions with timestamps
   voiceUrl?: string;
   reaction?: ReactionType;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, arrayUnion, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType, PaginationState } from '../types';
@@ -370,6 +370,10 @@ export const useChat = (currentUser: User) => {
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
+          editHistory: data.editHistory?.map((h: any) => ({
+            text: h.text,
+            editedAt: h.editedAt?.toDate()
+          })) || [],
           voiceUrl: data.voiceUrl,
           reaction: data.reaction
         } as Message;
@@ -451,6 +455,10 @@ export const useChat = (currentUser: User) => {
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
+          editHistory: data.editHistory?.map((h: any) => ({
+            text: h.text,
+            editedAt: h.editedAt?.toDate()
+          })) || [],
           voiceUrl: data.voiceUrl,
           reaction: data.reaction
         } as Message;
@@ -546,6 +554,10 @@ export const useChat = (currentUser: User) => {
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
+          editHistory: data.editHistory?.map((h: any) => ({
+            text: h.text,
+            editedAt: h.editedAt?.toDate()
+          })) || [],
           voiceUrl: data.voiceUrl,
           reaction: data.reaction
         } as Message;
@@ -663,10 +675,25 @@ export const useChat = (currentUser: User) => {
   const editMessage = async (messageId: string, newText: string) => {
     try {
       const messageRef = doc(db, 'messages', messageId);
-      await updateDoc(messageRef, {
-        text: newText,
-        edited: true
-      });
+
+      // Get current message to save its text to history
+      const messageDoc = await getDoc(messageRef);
+      if (messageDoc.exists()) {
+        const currentData = messageDoc.data();
+        const currentText = currentData.text;
+
+        // Only add to history if text is actually different
+        if (currentText !== newText) {
+          await updateDoc(messageRef, {
+            text: newText,
+            edited: true,
+            editHistory: arrayUnion({
+              text: currentText,
+              editedAt: serverTimestamp()
+            })
+          });
+        }
+      }
     } catch (error) {
       console.error('Error editing message:', error);
     }
@@ -739,6 +766,10 @@ export const useChat = (currentUser: User) => {
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
+          editHistory: data.editHistory?.map((h: any) => ({
+            text: h.text,
+            editedAt: h.editedAt?.toDate()
+          })) || [],
           voiceUrl: data.voiceUrl,
           reaction: data.reaction
         } as Message;
@@ -800,6 +831,10 @@ export const useChat = (currentUser: User) => {
                   readAt: data.readAt?.toDate(),
                   replyTo: data.replyTo,
                   edited: data.edited || false,
+                  editHistory: data.editHistory?.map((h: any) => ({
+                    text: h.text,
+                    editedAt: h.editedAt?.toDate()
+                  })) || [],
                   voiceUrl: data.voiceUrl,
                   reaction: data.reaction
                 } as Message;
@@ -903,6 +938,10 @@ export const useChat = (currentUser: User) => {
           readAt: data.readAt?.toDate(),
           replyTo: data.replyTo,
           edited: data.edited || false,
+          editHistory: data.editHistory?.map((h: any) => ({
+            text: h.text,
+            editedAt: h.editedAt?.toDate()
+          })) || [],
           voiceUrl: data.voiceUrl,
           reaction: data.reaction
         } as Message;
