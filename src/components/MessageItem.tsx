@@ -129,11 +129,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
   }, [showExpandedPicker, pickerPosition, isOwnMessage]);
 
   const handleEdit = () => {
-    if (editText.trim() && editText !== message.text) {
-      onEdit(message.id, editText);
+    if (editText.trim()) {
+      if (editText !== message.text) {
+        onEdit(message.id, editText);
+      }
+      setIsEditing(false);
+      setShowMenu(false);
     }
-    setIsEditing(false);
-    setShowMenu(false);
   };
 
   const handleVoicePlay = (e: React.MouseEvent | React.TouchEvent) => {
@@ -284,10 +286,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
     e.stopPropagation();
     setIsEditing(true);
     setShowMenu(false);
-    // Focus the textarea after it's rendered
+    // Focus the textarea after it's rendered and move cursor to end
     setTimeout(() => {
       if (editTextareaRef.current) {
         editTextareaRef.current.focus();
+        // Move cursor to the end
+        const length = editTextareaRef.current.value.length;
+        editTextareaRef.current.setSelectionRange(length, length);
         // Auto-resize the textarea
         editTextareaRef.current.style.height = 'auto';
         editTextareaRef.current.style.height = editTextareaRef.current.scrollHeight + 'px';
@@ -436,52 +441,56 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
 
             <div className="flex items-center justify-end mt-1 space-x-1">
-              <div className="relative">
-                <button
-                  onClick={toggleMenu}
-                  className="text-white/70 hover:text-white transition-colors duration-200 p-1"
-                >
-                  <MoreVertical size={14} />
-                </button>
-                {showMenu && (
-                  <div className={`absolute bottom-full ${isOwnMessage ? 'right-0' : 'left-0'} mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 min-w-[120px] z-10 border border-gray-200 dark:border-gray-700 animate-slide-in`}>
-                    <button
-                      onClick={handleShowInfo}
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
-                    >
-                      <Info size={14} />
-                      Info
-                    </button>
-                    {message.edited && message.editHistory && message.editHistory.length > 0 && (
-                      <button
-                        onClick={handleShowHistory}
-                        className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
-                      >
-                        <History size={14} />
-                        History
-                      </button>
-                    )}
-                    {isOwnMessage && (
-                      <>
+              {(isOwnMessage || (message.edited && message.editHistory && message.editHistory.length > 0)) && (
+                <div className="relative">
+                  <button
+                    onClick={toggleMenu}
+                    className="text-white/70 hover:text-white transition-colors duration-200 p-1"
+                  >
+                    <MoreVertical size={14} />
+                  </button>
+                  {showMenu && (
+                    <div className={`absolute bottom-full ${isOwnMessage ? 'right-0' : 'left-0'} mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 min-w-[120px] z-10 border border-gray-200 dark:border-gray-700 animate-slide-in`}>
+                      {isOwnMessage && (
                         <button
-                          onClick={startEditing}
+                          onClick={handleShowInfo}
                           className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
                         >
-                          <Edit2 size={14} />
-                          Edit
+                          <Info size={14} />
+                          Info
                         </button>
+                      )}
+                      {message.edited && message.editHistory && message.editHistory.length > 0 && (
                         <button
-                          onClick={handleDelete}
+                          onClick={handleShowHistory}
                           className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
                         >
-                          <Trash2 size={14} />
-                          Delete
+                          <History size={14} />
+                          History
                         </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                      )}
+                      {isOwnMessage && (
+                        <>
+                          <button
+                            onClick={startEditing}
+                            className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
+                          >
+                            <Edit2 size={14} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={handleDelete}
+                            className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="relative">
                 <button
                   onClick={toggleReactions}
