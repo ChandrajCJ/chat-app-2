@@ -674,16 +674,21 @@ export const useChat = (currentUser: User) => {
 
   const editMessage = async (messageId: string, newText: string) => {
     try {
+      console.log('Editing message:', messageId, 'New text:', newText);
       const messageRef = doc(db, 'messages', messageId);
 
       // Get current message to save its text to history
       const messageDoc = await getDoc(messageRef);
+      console.log('Message doc exists:', messageDoc.exists());
       if (messageDoc.exists()) {
         const currentData = messageDoc.data();
         const currentText = currentData.text;
+        console.log('Current text:', currentText);
+        console.log('Text changed:', currentText !== newText);
 
         // Only add to history if text is actually different
         if (currentText !== newText) {
+          console.log('Updating message with history...');
           await updateDoc(messageRef, {
             text: newText,
             edited: true,
@@ -692,6 +697,7 @@ export const useChat = (currentUser: User) => {
               editedAt: serverTimestamp()
             })
           });
+          console.log('Message updated successfully');
         }
       }
     } catch (error) {

@@ -129,12 +129,23 @@ const MessageItem: React.FC<MessageItemProps> = ({
   }, [showExpandedPicker, pickerPosition, isOwnMessage]);
 
   const handleEdit = () => {
+    console.log('handleEdit called');
+    console.log('editText:', editText);
+    console.log('message.text:', message.text);
+    console.log('trimmed:', editText.trim());
+    console.log('texts are different:', editText !== message.text);
+
     if (editText.trim()) {
       if (editText !== message.text) {
+        console.log('Calling onEdit with:', message.id, editText);
         onEdit(message.id, editText);
+      } else {
+        console.log('Text unchanged, not calling onEdit');
       }
       setIsEditing(false);
       setShowMenu(false);
+    } else {
+      console.log('Edit text is empty after trim');
     }
   };
 
