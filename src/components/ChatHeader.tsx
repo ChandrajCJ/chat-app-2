@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, UserStatuses, Message } from '../types';
+import { User, UserStatuses, Message, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
 import { ArrowLeft, UserRound } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import ColorSchemeSelector from './ColorSchemeSelector';
@@ -14,6 +14,10 @@ interface ChatHeaderProps {
   onScrollToMessage: (messageId: string) => void;
   onLoadAllMessages?: () => Promise<Message[]>;
   onLoadMessagesUntil?: (messageId: string) => Promise<boolean>;
+  onScheduleMessage?: (text: string, date: Date, time: string, recurrence: RecurrenceType, selectedDays?: DayOfWeek[]) => Promise<void>;
+  onDeleteScheduledMessage?: (messageId: string) => Promise<void>;
+  onToggleScheduledMessage?: (messageId: string, enabled: boolean) => Promise<void>;
+  scheduledMessages?: ScheduledMessage[];
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ 
@@ -23,7 +27,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onDeleteAll, 
   onScrollToMessage,
   onLoadAllMessages,
-  onLoadMessagesUntil
+  onLoadMessagesUntil,
+  onScheduleMessage,
+  onDeleteScheduledMessage,
+  onToggleScheduledMessage,
+  scheduledMessages
 }) => {
   const { setUser } = useUser();
   const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
@@ -76,6 +84,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           onScrollToMessage={onScrollToMessage}
           onLoadAllMessages={onLoadAllMessages}
           onLoadMessagesUntil={onLoadMessagesUntil}
+          onScheduleMessage={onScheduleMessage}
+          onDeleteScheduledMessage={onDeleteScheduledMessage}
+          onToggleScheduledMessage={onToggleScheduledMessage}
+          scheduledMessages={scheduledMessages}
         />
       </div>
     </div>

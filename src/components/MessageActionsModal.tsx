@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Trash2, X, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-react';
-import { Message } from '../types';
+import { Search, Trash2, X, MoreHorizontal, ArrowUp, ArrowDown, Clock } from 'lucide-react';
+import { Message, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
 import { formatDistanceToNow } from 'date-fns';
+import ScheduleMessageModal from './ScheduleMessageModal';
 
 interface SearchResult {
   message: Message;
@@ -15,6 +16,10 @@ interface MessageActionsModalProps {
   onScrollToMessage: (messageId: string) => void;
   onLoadAllMessages?: () => Promise<Message[]>;
   onLoadMessagesUntil?: (messageId: string) => Promise<boolean>;
+  onScheduleMessage?: (text: string, date: Date, time: string, recurrence: RecurrenceType, selectedDays?: DayOfWeek[]) => Promise<void>;
+  onDeleteScheduledMessage?: (messageId: string) => Promise<void>;
+  onToggleScheduledMessage?: (messageId: string, enabled: boolean) => Promise<void>;
+  scheduledMessages?: ScheduledMessage[];
 }
 
 const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
@@ -22,7 +27,11 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
   onDeleteAll,
   onScrollToMessage,
   onLoadAllMessages,
-  onLoadMessagesUntil
+  onLoadMessagesUntil,
+  onScheduleMessage,
+  onDeleteScheduledMessage,
+  onToggleScheduledMessage,
+  scheduledMessages = []
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,6 +39,7 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
   const [currentResultIndex, setCurrentResultIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [allMessages, setAllMessages] = useState<Message[]>(messages);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +113,11 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
       onDeleteAll();
       setIsOpen(false);
     }
+  };
+
+  const handleOpenScheduleModal = () => {
+    setIsOpen(false);
+    setIsScheduleModalOpen(true);
   };
 
   const handleSearchResultClick = async (result: SearchResult) => {
@@ -326,6 +341,25 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
           </div>
         )}
 
+        {/* Schedule Message Section */}
+        <div className="border-t border-gray-100 dark:border-gray-700">
+          <button
+            onClick={handleOpenScheduleModal}
+            className="w-full px-3 py-3 text-left hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors duration-200 flex items-center gap-3 text-primary-600 dark:text-primary-400"
+          >
+            <Clock size={16} />
+            <div>
+              <div className="text-sm font-medium">Schedule Messages</div>
+              <div className="text-xs text-primary-500 dark:text-primary-400">
+                {scheduledMessages.filter(m => m.enabled).length > 0 
+                  ? `${scheduledMessages.filter(m => m.enabled).length} active`
+                  : 'Create recurring or one-time messages'
+                }
+              </div>
+            </div>
+          </button>
+        </div>
+
         {/* Delete All Section */}
         <div className="border-t border-gray-100 dark:border-gray-700">
           <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -360,6 +394,15 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
       </button>
       
       {dropdown && createPortal(dropdown, document.body)}
+      
+      <ScheduleMessageModal 
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        onScheduleMessage={onScheduleMessage || (async () => {})}
+        onDeleteScheduledMessage={onDeleteScheduledMessage}
+        onToggleScheduledMessage={onToggleScheduledMessage}
+        scheduledMessages={scheduledMessages}
+      />
     </>
   );
 };

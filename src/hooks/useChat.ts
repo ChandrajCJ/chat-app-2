@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, arrayUnion, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, arrayUnion, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
-import { Message, User, UserStatuses, ReactionType, PaginationState } from '../types';
+import { Message, User, UserStatuses, ReactionType, PaginationState, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
 
 export const useChat = (currentUser: User) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,6 +17,7 @@ export const useChat = (currentUser: User) => {
     '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
+  const [scheduledMessages, setScheduledMessages] = useState<ScheduledMessage[]>([]);
 
   // Refs for optimization
   const statusUpdateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -746,6 +747,250 @@ export const useChat = (currentUser: User) => {
     }
   };
 
+  const scheduleMessage = async (text: string, date: Date, time: string, recurrence: RecurrenceType, selectedDays?: DayOfWeek[]) => {
+    try {
+      // Combine date and time into a single Date object
+      const [hours, minutes] = time.split(':').map(Number);
+      const scheduledDateTime = new Date(date);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+
+      const scheduledMessageData: any = {
+        text,
+        sender: currentUser,
+        scheduledDate: Timestamp.fromDate(scheduledDateTime),
+        scheduledTime: time,
+        recurrence,
+        createdAt: serverTimestamp(),
+        sent: false,
+        enabled: true
+      };
+
+      // Add selected days if custom recurrence
+      if (recurrence === 'custom' && selectedDays && selectedDays.length > 0) {
+        scheduledMessageData.selectedDays = selectedDays;
+      }
+
+      await addDoc(collection(db, 'scheduledMessages'), scheduledMessageData);
+    } catch (error) {
+      console.error('Error scheduling message:', error);
+      throw error;
+    }
+  };
+
+  const deleteScheduledMessage = async (messageId: string) => {
+    try {
+      await deleteDoc(doc(db, 'scheduledMessages', messageId));
+    } catch (error) {
+      console.error('Error deleting scheduled message:', error);
+      throw error;
+    }
+  };
+
+  const toggleScheduledMessage = async (messageId: string, enabled: boolean) => {
+    try {
+      const scheduledMsgRef = doc(db, 'scheduledMessages', messageId);
+      await updateDoc(scheduledMsgRef, { enabled });
+    } catch (error) {
+      console.error('Error toggling scheduled message:', error);
+      throw error;
+    }
+  };
+
+  // Function to calculate next scheduled date for recurring messages
+  const calculateNextScheduledDate = (currentDate: Date, recurrence: RecurrenceType): Date => {
+    const nextDate = new Date(currentDate);
+    
+    switch (recurrence) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
+      case 'weekly':
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      default:
+        // 'none' - don't reschedule
+        return nextDate;
+    }
+    
+    return nextDate;
+  };
+
+  // Listen to scheduled messages
+  useEffect(() => {
+    console.log('👂 Setting up scheduled messages listener for:', currentUser);
+    
+    const scheduledMessagesRef = collection(db, 'scheduledMessages');
+    // Simple query with just where clause - no orderBy to avoid composite index requirement
+    const q = query(scheduledMessagesRef, where('sender', '==', currentUser));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log(`📨 Received scheduled messages update: ${snapshot.docs.length} messages`);
+      
+      const scheduled = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text,
+          sender: data.sender,
+          scheduledDate: data.scheduledDate?.toDate() || new Date(),
+          scheduledTime: data.scheduledTime,
+          recurrence: data.recurrence,
+          selectedDays: data.selectedDays,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          sent: data.sent || false,
+          enabled: data.enabled !== undefined ? data.enabled : true
+        } as ScheduledMessage;
+      });
+      
+      // Sort by scheduledDate in memory (ascending - soonest first)
+      scheduled.sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
+      
+      console.log('📋 Updated scheduled messages state:', scheduled.length);
+      setScheduledMessages(scheduled);
+    }, (error) => {
+      console.error('❌ Error listening to scheduled messages:', error);
+      console.error('Error details:', error);
+    });
+
+    return () => {
+      console.log('🔌 Unsubscribing from scheduled messages listener');
+      unsubscribe();
+    };
+  }, [currentUser]);
+
+  // Scheduler service to check and send scheduled messages
+  useEffect(() => {
+    let schedulerInterval: NodeJS.Timeout;
+
+    const checkAndSendScheduledMessages = async () => {
+      console.log('🔍 Checking for scheduled messages...');
+      try {
+        const scheduledMessagesRef = collection(db, 'scheduledMessages');
+        const now = new Date();
+        
+        // Simplified query - just get all scheduled messages and filter in memory
+        // This avoids composite index requirements
+        const q = query(scheduledMessagesRef);
+        const snapshot = await getDocs(q);
+        
+        console.log(`📋 Found ${snapshot.docs.length} total scheduled messages`);
+
+        // Process each scheduled message
+        const sendPromises = snapshot.docs.map(async (docSnapshot) => {
+          const scheduledMessageData = docSnapshot.data();
+          const scheduledDate = scheduledMessageData.scheduledDate.toDate();
+          
+          // Filter: only process enabled, not-sent messages that are due
+          if (!scheduledMessageData.enabled || scheduledMessageData.sent || scheduledDate > now) {
+            return;
+          }
+          
+          console.log(`✅ Processing scheduled message: "${scheduledMessageData.text.substring(0, 30)}..."`);
+          console.log(`   Scheduled for: ${scheduledDate.toLocaleString()}`);
+          console.log(`   Current time: ${now.toLocaleString()}`);
+          console.log(`   Recurrence: ${scheduledMessageData.recurrence}`);
+          
+          // For custom recurrence, check if today is one of the selected days
+          if (scheduledMessageData.recurrence === 'custom' && scheduledMessageData.selectedDays) {
+            const dayName = scheduledDate.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
+            if (!scheduledMessageData.selectedDays.includes(dayName)) {
+              console.log(`⏭️  Skipping - not a selected day (${dayName})`);
+              // Not a selected day, skip sending but update to next occurrence
+              const nextScheduledDate = calculateNextScheduledDate(
+                scheduledDate, 
+                scheduledMessageData.recurrence
+              );
+              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
+              await updateDoc(scheduledMsgRef, {
+                scheduledDate: Timestamp.fromDate(nextScheduledDate)
+              });
+              return;
+            }
+          }
+          
+          try {
+            console.log(`📤 Sending message: "${scheduledMessageData.text}"`);
+            
+            // Send the message
+            await addDoc(collection(db, 'messages'), {
+              text: scheduledMessageData.text,
+              sender: scheduledMessageData.sender,
+              timestamp: serverTimestamp(),
+              delivered: false,
+              read: false
+            });
+            
+            console.log('✉️ Message sent successfully!');
+
+            // Check if this is a recurring message
+            if (scheduledMessageData.recurrence && scheduledMessageData.recurrence !== 'none') {
+              // Calculate next scheduled date
+              let nextScheduledDate = calculateNextScheduledDate(
+                scheduledDate, 
+                scheduledMessageData.recurrence
+              );
+
+              // For custom recurrence, find the next matching day
+              if (scheduledMessageData.recurrence === 'custom' && scheduledMessageData.selectedDays) {
+                let attempts = 0;
+                while (attempts < 7) {
+                  const dayName = nextScheduledDate.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
+                  if (scheduledMessageData.selectedDays.includes(dayName)) {
+                    break;
+                  }
+                  nextScheduledDate = new Date(nextScheduledDate.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
+                  attempts++;
+                }
+              }
+
+              console.log(`🔁 Recurring message - next send: ${nextScheduledDate.toLocaleString()}`);
+              
+              // Update the scheduled message with the next date
+              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
+              await updateDoc(scheduledMsgRef, {
+                scheduledDate: Timestamp.fromDate(nextScheduledDate),
+                sent: false // Reset sent flag for next occurrence
+              });
+            } else {
+              console.log('✔️  One-time message - marking as sent');
+              // Mark as sent for non-recurring messages
+              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
+              await updateDoc(scheduledMsgRef, {
+                sent: true
+              });
+            }
+          } catch (error) {
+            console.error('❌ Error sending scheduled message:', error);
+          }
+        });
+        
+        // Wait for all sends to complete
+        await Promise.all(sendPromises);
+        
+      } catch (error) {
+        console.error('❌ Error checking scheduled messages:', error);
+      }
+    };
+
+    // Check for scheduled messages every 10 seconds (faster for testing)
+    schedulerInterval = setInterval(checkAndSendScheduledMessages, 10000);
+    
+    console.log('⏰ Scheduler started - checking every 10 seconds');
+    
+    // Also check immediately on mount
+    checkAndSendScheduledMessages();
+
+    return () => {
+      if (schedulerInterval) {
+        clearInterval(schedulerInterval);
+        console.log('⏹️  Scheduler stopped');
+      }
+    };
+  }, [currentUser]);
+
   // Function to load all messages for search
   const loadAllMessagesForSearch = useCallback(async () => {
     try {
@@ -988,6 +1233,10 @@ export const useChat = (currentUser: User) => {
     reactToMessage,
     removeReaction,
     setTypingStatus,
-    sendVoiceMessage
+    sendVoiceMessage,
+    scheduleMessage,
+    deleteScheduledMessage,
+    toggleScheduledMessage,
+    scheduledMessages
   };
 };

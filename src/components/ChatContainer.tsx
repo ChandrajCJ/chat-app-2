@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Message, ReactionType } from '../types';
+import { User, Message } from '../types';
 import { useChat } from '../hooks/useChat';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
@@ -25,7 +25,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
     sendVoiceMessage,
     reactToMessage,
     removeReaction,
-    setTypingStatus
+    setTypingStatus,
+    scheduleMessage,
+    deleteScheduledMessage,
+    toggleScheduledMessage,
+    scheduledMessages
   } = useChat(currentUser);
   const [replyingTo, setReplyingTo] = useState<Message | undefined>();
 
@@ -63,6 +67,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         }}
         onLoadAllMessages={loadAllMessagesForSearch}
         onLoadMessagesUntil={loadMessagesUntil}
+        onScheduleMessage={scheduleMessage}
+        onDeleteScheduledMessage={deleteScheduledMessage}
+        onToggleScheduledMessage={toggleScheduledMessage}
+        scheduledMessages={scheduledMessages}
       />
       
       <MessageList 

@@ -41,3 +41,25 @@ export interface PaginationState {
   lastVisible: any; // Firestore DocumentSnapshot
   totalLoaded: number;
 }
+
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'custom';
+
+export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+
+export interface ScheduledMessage {
+  id: string;
+  text: string;
+  sender: User;
+  scheduledDate: Date;
+  scheduledTime: string; // Format: "HH:MM"
+  recurrence: RecurrenceType;
+  selectedDays?: DayOfWeek[]; // For custom recurrence - which days to send
+  createdAt: Date;
+  sent: boolean;
+  enabled: boolean; // Whether the scheduled message is active
+  replyTo?: {
+    id: string;
+    text: string;
+    sender: User;
+  };
+}
