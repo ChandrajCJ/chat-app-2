@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, arrayUnion, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, setDoc, writeBatch, where, limit, startAfter, arrayUnion, getDoc, Timestamp, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../services/firebase';
 import { Message, User, UserStatuses, ReactionType, PaginationState, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
@@ -870,116 +870,116 @@ export const useChat = (currentUser: User) => {
       try {
         const scheduledMessagesRef = collection(db, 'scheduledMessages');
         const now = new Date();
-        
-        // Simplified query - just get all scheduled messages and filter in memory
-        // This avoids composite index requirements
-        const q = query(scheduledMessagesRef);
+
+        // Query only messages that are enabled, not sent, and belong to current user
+        const q = query(
+          scheduledMessagesRef,
+          where('sender', '==', currentUser),
+          where('enabled', '==', true),
+          where('sent', '==', false)
+        );
         const snapshot = await getDocs(q);
-        
-        console.log(`📋 Found ${snapshot.docs.length} total scheduled messages`);
+
+        console.log(`📋 Found ${snapshot.docs.length} pending scheduled messages for ${currentUser}`);
 
         // Process each scheduled message
-        const sendPromises = snapshot.docs.map(async (docSnapshot) => {
+        for (const docSnapshot of snapshot.docs) {
           const scheduledMessageData = docSnapshot.data();
           const scheduledDate = scheduledMessageData.scheduledDate.toDate();
-          
-          // Filter: only process enabled, not-sent messages that are due
-          if (!scheduledMessageData.enabled || scheduledMessageData.sent || scheduledDate > now) {
-            return;
+
+          // Check if message is due
+          if (scheduledDate > now) {
+            continue; // Not yet time to send
           }
-          
+
           console.log(`✅ Processing scheduled message: "${scheduledMessageData.text.substring(0, 30)}..."`);
           console.log(`   Scheduled for: ${scheduledDate.toLocaleString()}`);
           console.log(`   Current time: ${now.toLocaleString()}`);
-          console.log(`   Recurrence: ${scheduledMessageData.recurrence}`);
-          
-          // For custom recurrence, check if today is one of the selected days
-          if (scheduledMessageData.recurrence === 'custom' && scheduledMessageData.selectedDays) {
-            const dayName = scheduledDate.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
-            if (!scheduledMessageData.selectedDays.includes(dayName)) {
-              console.log(`⏭️  Skipping - not a selected day (${dayName})`);
-              // Not a selected day, skip sending but update to next occurrence
-              const nextScheduledDate = calculateNextScheduledDate(
-                scheduledDate, 
-                scheduledMessageData.recurrence
-              );
-              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
-              await updateDoc(scheduledMsgRef, {
-                scheduledDate: Timestamp.fromDate(nextScheduledDate)
-              });
-              return;
-            }
-          }
-          
+
           try {
-            console.log(`📤 Sending message: "${scheduledMessageData.text}"`);
-            
-            // Send the message
-            await addDoc(collection(db, 'messages'), {
-              text: scheduledMessageData.text,
-              sender: scheduledMessageData.sender,
-              timestamp: serverTimestamp(),
-              delivered: false,
-              read: false
-            });
-            
-            console.log('✉️ Message sent successfully!');
+            // Use transaction to ensure only one client sends the message
+            await runTransaction(db, async (transaction) => {
+              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
+              const scheduledDoc = await transaction.get(scheduledMsgRef);
 
-            // Check if this is a recurring message
-            if (scheduledMessageData.recurrence && scheduledMessageData.recurrence !== 'none') {
-              // Calculate next scheduled date
-              let nextScheduledDate = calculateNextScheduledDate(
-                scheduledDate, 
-                scheduledMessageData.recurrence
-              );
-
-              // For custom recurrence, find the next matching day
-              if (scheduledMessageData.recurrence === 'custom' && scheduledMessageData.selectedDays) {
-                let attempts = 0;
-                while (attempts < 7) {
-                  const dayName = nextScheduledDate.toLocaleDateString('en-US', { weekday: 'long' }) as DayOfWeek;
-                  if (scheduledMessageData.selectedDays.includes(dayName)) {
-                    break;
-                  }
-                  nextScheduledDate = new Date(nextScheduledDate.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
-                  attempts++;
-                }
+              if (!scheduledDoc.exists()) {
+                console.log('⚠️  Scheduled message no longer exists');
+                return;
               }
 
-              console.log(`🔁 Recurring message - next send: ${nextScheduledDate.toLocaleString()}`);
-              
-              // Update the scheduled message with the next date
-              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
-              await updateDoc(scheduledMsgRef, {
-                scheduledDate: Timestamp.fromDate(nextScheduledDate),
-                sent: false // Reset sent flag for next occurrence
+              const currentData = scheduledDoc.data();
+
+              // Double-check that message hasn't been sent yet
+              if (currentData.sent) {
+                console.log('⚠️  Message already sent by another client');
+                return;
+              }
+
+              // Check if still enabled
+              if (!currentData.enabled) {
+                console.log('⚠️  Message has been disabled');
+                return;
+              }
+
+              console.log(`📤 Sending message: "${scheduledMessageData.text}"`);
+
+              // Add the message to messages collection
+              const messagesRef = collection(db, 'messages');
+              const newMessageRef = doc(messagesRef);
+              transaction.set(newMessageRef, {
+                text: scheduledMessageData.text,
+                sender: scheduledMessageData.sender,
+                timestamp: serverTimestamp(),
+                delivered: false,
+                read: false
               });
+
+              console.log('✉️ Message sent successfully!');
+
+              // Handle recurrence or mark as sent
+              if (scheduledMessageData.recurrence && scheduledMessageData.recurrence !== 'none') {
+                // Calculate next scheduled date
+                const nextScheduledDate = calculateNextScheduledDate(
+                  scheduledDate,
+                  scheduledMessageData.recurrence
+                );
+
+                console.log(`🔁 Recurring message - next send: ${nextScheduledDate.toLocaleString()}`);
+
+                // Update with next scheduled time
+                transaction.update(scheduledMsgRef, {
+                  scheduledDate: Timestamp.fromDate(nextScheduledDate)
+                });
+              } else {
+                console.log('✔️  One-time message - marking as sent');
+                // Mark as sent for non-recurring messages
+                transaction.update(scheduledMsgRef, {
+                  sent: true
+                });
+              }
+            });
+
+            console.log('✅ Transaction completed successfully');
+          } catch (error: any) {
+            // If transaction fails due to contention, another client is handling it
+            if (error.code === 'aborted' || error.code === 'failed-precondition') {
+              console.log('⚠️  Another client is handling this message');
             } else {
-              console.log('✔️  One-time message - marking as sent');
-              // Mark as sent for non-recurring messages
-              const scheduledMsgRef = doc(db, 'scheduledMessages', docSnapshot.id);
-              await updateDoc(scheduledMsgRef, {
-                sent: true
-              });
+              console.error('❌ Error sending scheduled message:', error);
             }
-          } catch (error) {
-            console.error('❌ Error sending scheduled message:', error);
           }
-        });
-        
-        // Wait for all sends to complete
-        await Promise.all(sendPromises);
-        
+        }
+
       } catch (error) {
         console.error('❌ Error checking scheduled messages:', error);
       }
     };
 
-    // Check for scheduled messages every 10 seconds (faster for testing)
-    schedulerInterval = setInterval(checkAndSendScheduledMessages, 10000);
-    
-    console.log('⏰ Scheduler started - checking every 10 seconds');
-    
+    // Check for scheduled messages every 30 seconds
+    schedulerInterval = setInterval(checkAndSendScheduledMessages, 30000);
+
+    console.log('⏰ Scheduler started - checking every 30 seconds');
+
     // Also check immediately on mount
     checkAndSendScheduledMessages();
 
