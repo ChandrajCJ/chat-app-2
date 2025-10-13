@@ -567,7 +567,7 @@ export const useChat = (currentUser: User) => {
           // Only add messages that are newer than our latest loaded timestamp
           // or if we don't have a timestamp reference yet
           const shouldAddMessage = !latestTimestamp || 
-            message.timestamp > latestTimestamp;
+            message.timestamp >= latestTimestamp;
             
           if (shouldAddMessage) {
             setMessages(prev => {
