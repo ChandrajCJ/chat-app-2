@@ -335,83 +335,103 @@ export const useChat = (currentUser: User) => {
 
   // Load initial messages with pagination
   const loadInitialMessages = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const messagesRef = collection(db, 'messages');
-      const q = query(
-        messagesRef,
-        orderBy('timestamp', 'desc'),
-        limit(50) // Load more messages initially to ensure chat history is visible
-      );
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`📥 Loading initial messages (attempt ${retryCount + 1}/${maxRetries})...`);
+        setLoading(true);
+        const messagesRef = collection(db, 'messages');
+        const q = query(
+          messagesRef,
+          orderBy('timestamp', 'desc'),
+          limit(50) // Load more messages initially to ensure chat history is visible
+        );
 
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        setMessages([]);
+        const snapshot = await getDocs(q);
+        console.log(`✅ Loaded ${snapshot.docs.length} messages successfully`);
+        
+        if (snapshot.empty) {
+          setMessages([]);
+          setPagination(prev => ({
+            ...prev,
+            lastVisible: null,
+            hasMore: false,
+            totalLoaded: 0
+          }));
+          setLoading(false);
+          return;
+        }
+
+        const initialMessages = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            text: data.text || '',
+            sender: data.sender,
+            timestamp: data.timestamp?.toDate() || new Date(),
+            delivered: data.delivered || false,
+            deliveredAt: data.deliveredAt?.toDate(),
+            read: data.read || false,
+            readAt: data.readAt?.toDate(),
+            replyTo: data.replyTo,
+            edited: data.edited || false,
+            editHistory: data.editHistory?.map((h: any) => ({
+              text: h.text,
+              editedAt: h.editedAt?.toDate()
+            })) || [],
+            voiceUrl: data.voiceUrl,
+            reaction: data.reaction
+          } as Message;
+        }).reverse(); // Reverse to get chronological order
+
+        setMessages(initialMessages);
         setPagination(prev => ({
           ...prev,
-          lastVisible: null,
-          hasMore: false,
-          totalLoaded: 0
+          lastVisible: snapshot.docs[snapshot.docs.length - 1],
+          hasMore: snapshot.docs.length === 50, // If we got less than 50, no more messages
+          totalLoaded: snapshot.docs.length
         }));
         setLoading(false);
-        return;
-      }
 
-      const initialMessages = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          text: data.text || '',
-          sender: data.sender,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          delivered: data.delivered || false,
-          deliveredAt: data.deliveredAt?.toDate(),
-          read: data.read || false,
-          readAt: data.readAt?.toDate(),
-          replyTo: data.replyTo,
-          edited: data.edited || false,
-          editHistory: data.editHistory?.map((h: any) => ({
-            text: h.text,
-            editedAt: h.editedAt?.toDate()
-          })) || [],
-          voiceUrl: data.voiceUrl,
-          reaction: data.reaction
-        } as Message;
-      }).reverse(); // Reverse to get chronological order
+        // Batch mark unread messages from other users as read
+        const unreadMessages = initialMessages.filter(
+          message => message.sender !== currentUser && !message.read
+        );
 
-      setMessages(initialMessages);
-      setPagination(prev => ({
-        ...prev,
-        lastVisible: snapshot.docs[snapshot.docs.length - 1],
-        hasMore: snapshot.docs.length === 50, // If we got less than 50, no more messages
-        totalLoaded: snapshot.docs.length
-      }));
-      setLoading(false);
+        if (unreadMessages.length > 0) {
+          unreadMessages.forEach(message => {
+            pendingMessagesToMarkReadRef.current.add(message.id);
+          });
 
-      // Batch mark unread messages from other users as read
-      const unreadMessages = initialMessages.filter(
-        message => message.sender !== currentUser && !message.read
-      );
-
-      if (unreadMessages.length > 0) {
-        unreadMessages.forEach(message => {
-          pendingMessagesToMarkReadRef.current.add(message.id);
-        });
-
-        if (markReadTimeoutRef.current) {
-          clearTimeout(markReadTimeoutRef.current);
+          if (markReadTimeoutRef.current) {
+            clearTimeout(markReadTimeoutRef.current);
+          }
+          
+          markReadTimeoutRef.current = setTimeout(() => {
+            batchMarkMessagesAsRead();
+          }, 500);
         }
         
-        markReadTimeoutRef.current = setTimeout(() => {
-          batchMarkMessagesAsRead();
-        }, 500);
+        // Success - break out of retry loop
+        return;
+        
+      } catch (error: any) {
+        retryCount++;
+        console.error(`❌ Error loading initial messages (attempt ${retryCount}/${maxRetries}):`, error);
+        
+        if (retryCount >= maxRetries) {
+          console.error('💥 Failed to load messages after maximum retries');
+          setLoading(false);
+          throw error;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-    } catch (error) {
-      console.error('Error loading initial messages:', error);
-      setLoading(false);
-      // Re-throw to let the caller know there was an error
-      throw error;
     }
   }, [currentUser, batchMarkMessagesAsRead]);
 
