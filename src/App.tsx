@@ -5,12 +5,12 @@ import UserSelection from './components/UserSelection';
 import ChatContainer from './components/ChatContainer';
 
 const ChatApp: React.FC = () => {
-  const { currentUser } = useUser();
+  const { currentUser, loginKey } = useUser();
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950 text-gray-700 dark:text-gray-100 transition-colors duration-300">
       {currentUser ? (
-        <ChatContainer currentUser={currentUser} />
+        <ChatContainer key={`${currentUser}-${loginKey}`} currentUser={currentUser} />
       ) : (
         <UserSelection />
       )}
