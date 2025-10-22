@@ -63,6 +63,12 @@ const UserSelection: React.FC = () => {
     }
   };
 
+  // Check if the device is mobile
+  const isMobileDevice = () => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+  };
+
   const handleBiometricLogin = async () => {
     setBiometricLoading(true);
     setBiometricError('');
@@ -93,8 +99,8 @@ const UserSelection: React.FC = () => {
       // If biometric is enabled, don't show PIN input initially
       if (enabled && available) {
         setShowPinInput(false);
-        // Automatically trigger biometric authentication on first load
-        if (!autoPromptTriggered) {
+        // Automatically trigger biometric authentication on first load (only on mobile)
+        if (!autoPromptTriggered && isMobileDevice()) {
           setAutoPromptTriggered(true);
           setTimeout(() => {
             handleBiometricLogin();
