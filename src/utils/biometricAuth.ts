@@ -99,11 +99,23 @@ export const enableBiometricAuth = async (user: User): Promise<boolean> => {
     return true;
   } catch (error: any) {
     console.error('Error enabling biometric auth:', error);
+    
     // User cancelled or biometric failed
     if (error.name === 'NotAllowedError') {
       throw new Error('Biometric authentication was cancelled');
     }
-    throw new Error('Failed to enable biometric authentication');
+    
+    // Invalid state error - might indicate no biometric hardware or not set up
+    if (error.name === 'InvalidStateError') {
+      throw new Error('A passkey already exists or biometric is not properly configured');
+    }
+    
+    // Not supported error
+    if (error.name === 'NotSupportedError') {
+      throw new Error('Your browser or device does not support biometric authentication');
+    }
+    
+    throw new Error('Failed to enable biometric authentication. Make sure biometrics are set up in your device settings.');
   }
 };
 
@@ -147,6 +159,11 @@ export const authenticateWithBiometric = async (): Promise<User | null> => {
     // User cancelled
     if (error.name === 'NotAllowedError') {
       throw new Error('Biometric authentication was cancelled');
+    }
+    
+    // No credentials available - user needs to enable biometric first
+    if (error.name === 'NotFoundError') {
+      throw new Error('No passkeys found. Please login with PIN and enable biometric in Settings first.');
     }
     
     throw new Error('Biometric authentication failed');
