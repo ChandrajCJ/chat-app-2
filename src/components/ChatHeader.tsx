@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, UserStatuses, Message, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
-import { ArrowLeft, UserRound } from 'lucide-react';
+import { ArrowLeft, UserRound, Settings } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import ColorSchemeSelector from './ColorSchemeSelector';
 import MessageActionsModal from './MessageActionsModal';
+import BiometricSettingsModal from './BiometricSettingsModal';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ChatHeaderProps {
@@ -33,12 +34,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleScheduledMessage,
   scheduledMessages
 }) => {
-  const { setUser } = useUser();
+  const { logout } = useUser();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
   const otherUserStatus = userStatuses[otherUser];
   
   const handleBack = () => {
-    setUser(null as any);
+    window.location.reload();
   };
 
 
@@ -78,6 +80,16 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
       <div className="flex items-center gap-2">
         <ColorSchemeSelector />
+        
+        {/* Settings Button */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded-full transition-all duration-200"
+          title="Settings"
+        >
+          <Settings size={20} />
+        </button>
+        
         <MessageActionsModal 
           messages={messages}
           onDeleteAll={onDeleteAll}
@@ -90,6 +102,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           scheduledMessages={scheduledMessages}
         />
       </div>
+      
+      {/* Biometric Settings Modal */}
+      <BiometricSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 };
