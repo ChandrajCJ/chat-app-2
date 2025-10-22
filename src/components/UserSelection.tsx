@@ -18,6 +18,7 @@ const UserSelection: React.FC = () => {
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [biometricError, setBiometricError] = useState('');
   const [showPinInput, setShowPinInput] = useState(false);
+  const [autoPromptTriggered, setAutoPromptTriggered] = useState(false); // Track if auto-prompt already happened
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -62,33 +63,6 @@ const UserSelection: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    // Check biometric availability
-    const checkBiometric = async () => {
-      const available = await isBiometricAvailable();
-      const enabled = isBiometricEnabled();
-      setBiometricAvailable(available);
-      setBiometricEnabled(enabled);
-      
-      // If biometric is enabled, don't show PIN input initially
-      if (enabled && available) {
-        setShowPinInput(false);
-      } else {
-        setShowPinInput(true);
-        // Automatically focus on PIN input
-        setTimeout(() => {
-          const firstInput = inputRefs[0].current;
-          if (firstInput) {
-            firstInput.focus();
-            firstInput.click();
-          }
-        }, 100);
-      }
-    };
-    
-    checkBiometric();
-  }, []);
-
   const handleBiometricLogin = async () => {
     setBiometricLoading(true);
     setBiometricError('');
@@ -107,6 +81,41 @@ const UserSelection: React.FC = () => {
       setBiometricLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Check biometric availability
+    const checkBiometric = async () => {
+      const available = await isBiometricAvailable();
+      const enabled = isBiometricEnabled();
+      setBiometricAvailable(available);
+      setBiometricEnabled(enabled);
+      
+      // If biometric is enabled, don't show PIN input initially
+      if (enabled && available) {
+        setShowPinInput(false);
+        // Automatically trigger biometric authentication on first load
+        if (!autoPromptTriggered) {
+          setAutoPromptTriggered(true);
+          setTimeout(() => {
+            handleBiometricLogin();
+          }, 500); // Small delay to ensure UI is ready
+        }
+      } else {
+        setShowPinInput(true);
+        // Automatically focus on PIN input
+        setTimeout(() => {
+          const firstInput = inputRefs[0].current;
+          if (firstInput) {
+            firstInput.focus();
+            firstInput.click();
+          }
+        }, 100);
+      }
+    };
+    
+    checkBiometric();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUsePinInstead = () => {
     setShowPinInput(true);
