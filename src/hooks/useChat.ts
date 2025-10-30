@@ -27,6 +27,7 @@ export const useChat = (currentUser: User) => {
   const markReadTimeoutRef = useRef<NodeJS.Timeout>();
   const isTypingRef = useRef<boolean>(false);
   const isOnlineRef = useRef<boolean>(false);
+  const sessionIdRef = useRef<string>(Date.now().toString()); // Unique session ID
 
   // Immediate status update function (no debouncing for critical updates)
   const updateStatusImmediately = useCallback(async (updates: any) => {
@@ -34,7 +35,8 @@ export const useChat = (currentUser: User) => {
       const userStatusRef = doc(db, 'status', currentUser);
       await setDoc(userStatusRef, {
         ...updates,
-        lastSeen: serverTimestamp()
+        lastSeen: serverTimestamp(),
+        sessionId: sessionIdRef.current // Add session ID to prevent stale updates
       }, { merge: true });
     } catch (error) {
       console.error('Error updating status immediately:', error);
@@ -53,7 +55,8 @@ export const useChat = (currentUser: User) => {
           await updateDoc(userStatusRef, {
             lastSeen: serverTimestamp(),
             isOnline: false,
-            isTyping: false
+            isTyping: false,
+            sessionId: sessionIdRef.current
           });
         } catch (error) {
           console.error('Error updating offline status in heartbeat:', error);
@@ -67,7 +70,8 @@ export const useChat = (currentUser: User) => {
       await updateDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: true,
-        isTyping: isTypingRef.current // Maintain current typing status
+        isTyping: isTypingRef.current, // Maintain current typing status
+        sessionId: sessionIdRef.current
       });
     } catch (error) {
       console.error('Error sending heartbeat:', error);
@@ -195,7 +199,8 @@ export const useChat = (currentUser: User) => {
       const data = JSON.stringify({
         isOnline: false,
         isTyping: false,
-        lastSeen: new Date().toISOString()
+        lastSeen: new Date().toISOString(),
+        sessionId: sessionIdRef.current
       });
       
       if (navigator.sendBeacon) {
@@ -282,14 +287,30 @@ export const useChat = (currentUser: User) => {
         clearTimeout(markReadTimeoutRef.current);
       }
 
-      // Final offline status update
+      // Final offline status update - only if this is still the active session
       isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
-      setDoc(userStatusRef, {
-        lastSeen: serverTimestamp(),
-        isOnline: false,
-        isTyping: false
-      }, { merge: true }).catch(() => {
+      const currentSessionId = sessionIdRef.current;
+      
+      // Check if this session is still the active one before marking offline
+      getDoc(userStatusRef).then((docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          // Only mark offline if this is still the active session
+          if (data.sessionId === currentSessionId) {
+            setDoc(userStatusRef, {
+              lastSeen: serverTimestamp(),
+              isOnline: false,
+              isTyping: false,
+              sessionId: currentSessionId
+            }, { merge: true }).catch(() => {
+              // Ignore errors during cleanup
+            });
+          } else {
+            console.log('Session changed, skipping offline status update');
+          }
+        }
+      }).catch(() => {
         // Ignore errors during cleanup
       });
     };
@@ -308,14 +329,20 @@ export const useChat = (currentUser: User) => {
       if (isTyping) {
         // Immediately update typing status
         if (!isTypingRef.current) {
-          await updateDoc(userStatusRef, { isTyping: true });
+          await updateDoc(userStatusRef, { 
+            isTyping: true,
+            sessionId: sessionIdRef.current
+          });
           isTypingRef.current = true;
         }
         
         // Auto-clear typing status after 2 seconds (reduced from 3)
         typingTimeoutRef.current = setTimeout(async () => {
           try {
-            await updateDoc(userStatusRef, { isTyping: false });
+            await updateDoc(userStatusRef, { 
+              isTyping: false,
+              sessionId: sessionIdRef.current
+            });
             isTypingRef.current = false;
           } catch (error) {
             console.error('Error clearing typing status:', error);
@@ -324,7 +351,10 @@ export const useChat = (currentUser: User) => {
       } else {
         // Immediately clear typing status
         if (isTypingRef.current) {
-          await updateDoc(userStatusRef, { isTyping: false });
+          await updateDoc(userStatusRef, { 
+            isTyping: false,
+            sessionId: sessionIdRef.current
+          });
           isTypingRef.current = false;
         }
       }
