@@ -31,22 +31,27 @@ export const useChat = (currentUser: User) => {
   // Immediate status update function (no debouncing for critical updates)
   const updateStatusImmediately = useCallback(async (updates: any) => {
     try {
+      console.log(`🔄 Updating status immediately for ${currentUser}:`, updates);
       const userStatusRef = doc(db, 'status', currentUser);
       await setDoc(userStatusRef, {
         ...updates,
         lastSeen: serverTimestamp()
       }, { merge: true });
+      console.log(`✅ Status updated successfully for ${currentUser}`);
     } catch (error) {
-      console.error('Error updating status immediately:', error);
+      console.error('❌ Error updating status immediately:', error);
     }
   }, [currentUser]);
 
   // Heartbeat function to maintain online status
   const sendHeartbeat = useCallback(async () => {
+    console.log(`💓 Heartbeat check for ${currentUser} - hidden: ${document.hidden}, isOnlineRef: ${isOnlineRef.current}`);
+    
     // Only send heartbeat if tab is visible and user should be online
     if (document.hidden || !isOnlineRef.current) {
       // If tab is hidden, mark as offline
       if (document.hidden && isOnlineRef.current) {
+        console.log(`🌙 Tab hidden, marking ${currentUser} offline`);
         isOnlineRef.current = false;
         try {
           const userStatusRef = doc(db, 'status', currentUser);
@@ -55,22 +60,25 @@ export const useChat = (currentUser: User) => {
             isOnline: false,
             isTyping: false
           }, { merge: true });
+          console.log(`✅ ${currentUser} marked offline successfully`);
         } catch (error) {
-          console.error('Error updating offline status in heartbeat:', error);
+          console.error('❌ Error updating offline status in heartbeat:', error);
         }
       }
       return;
     }
     
     try {
+      console.log(`💚 Sending heartbeat for ${currentUser} (online: true, typing: ${isTypingRef.current})`);
       const userStatusRef = doc(db, 'status', currentUser);
       await setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: true,
         isTyping: isTypingRef.current // Maintain current typing status
       }, { merge: true });
+      console.log(`✅ Heartbeat sent successfully for ${currentUser}`);
     } catch (error) {
-      console.error('Error sending heartbeat:', error);
+      console.error('❌ Error sending heartbeat:', error);
       // If heartbeat fails, we might be offline
       isOnlineRef.current = false;
     }
@@ -134,9 +142,11 @@ export const useChat = (currentUser: User) => {
 
   // Initialize status documents for both users to prevent missing document errors
   const initializeStatusDocuments = useCallback(async () => {
+    console.log(`🚀 Initializing status documents (current user: ${currentUser})...`);
     try {
       const users: User[] = ['🐞', '🦎'];
       const initPromises = users.map(async (user) => {
+        console.log(`📝 Creating/updating status document for ${user}...`);
         const statusRef = doc(db, 'status', user);
         // Only initialize if the user is the current user or if document doesn't exist
         if (user === currentUser) {
@@ -145,6 +155,7 @@ export const useChat = (currentUser: User) => {
             isTyping: false,
             lastSeen: serverTimestamp()
           }, { merge: true });
+          console.log(`✅ ${user} initialized as ONLINE`);
         } else {
           // For other user, just ensure document exists with offline status
           await setDoc(statusRef, {
@@ -152,22 +163,27 @@ export const useChat = (currentUser: User) => {
             isTyping: false,
             lastSeen: serverTimestamp()
           }, { merge: true });
+          console.log(`✅ ${user} initialized as OFFLINE`);
         }
       });
       await Promise.all(initPromises);
-      console.log('✅ Status documents initialized');
+      console.log('🎉 All status documents initialized successfully!');
     } catch (error) {
-      console.error('Error initializing status documents:', error);
+      console.error('❌ Error initializing status documents:', error);
     }
   }, [currentUser]);
 
   // Handle user status with improved accuracy
   useEffect(() => {
+    console.log(`🎬 Starting status management for user: ${currentUser}`);
+    
     // Set initial online status immediately
     isOnlineRef.current = true;
+    console.log(`✅ isOnlineRef set to true for ${currentUser}`);
     
     // Initialize status documents for both users first
     initializeStatusDocuments().then(() => {
+      console.log(`📤 Initialization complete, sending immediate status update for ${currentUser}`);
       // Then set current user as online
       updateStatusImmediately({ isOnline: true, isTyping: false });
     });
@@ -176,6 +192,7 @@ export const useChat = (currentUser: User) => {
     markUnreadMessagesAsRead();
 
     // Start heartbeat to maintain online status (every 15 seconds for better accuracy)
+    console.log(`💓 Starting heartbeat interval (every 15s) for ${currentUser}`);
     heartbeatIntervalRef.current = setInterval(sendHeartbeat, 15000);
 
     const handleVisibilityChange = () => {
@@ -269,7 +286,10 @@ export const useChat = (currentUser: User) => {
 
     // Listen to status changes with real-time updates
     const statusRef = collection(db, 'status');
+    console.log('👂 Setting up status listener for collection: status');
+    
     const unsubscribeStatus = onSnapshot(statusRef, (snapshot) => {
+      console.log(`📬 Status snapshot received! Document count: ${snapshot.docs.length}`);
       const now = new Date();
       const newStatuses: UserStatuses = {
         '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
@@ -279,6 +299,8 @@ export const useChat = (currentUser: User) => {
       snapshot.docs.forEach((doc) => {
         const user = doc.id as User;
         const data = doc.data();
+        console.log(`📄 Processing status document for ${user}:`, data);
+        
         const lastSeen = data.lastSeen?.toDate() || new Date();
         
         // Consider user offline if last seen is more than 30 seconds ago (2x heartbeat interval)
@@ -295,19 +317,24 @@ export const useChat = (currentUser: User) => {
         };
         
         // Debug logging for status updates
-        if (user !== currentUser) {
-          console.log(`📊 Status update for ${user}:`, {
-            isOnline,
-            isTyping,
-            timeSinceLastSeen: `${Math.round(timeSinceLastSeen / 1000)}s`,
-            rawData: { isOnline: data.isOnline, isTyping: data.isTyping }
-          });
-        }
+        console.log(`📊 Processed status for ${user}:`, {
+          isOnline,
+          isTyping,
+          lastSeen: lastSeen.toISOString(),
+          timeSinceLastSeen: `${Math.round(timeSinceLastSeen / 1000)}s`,
+          isRecentlyActive,
+          rawData: { 
+            isOnline: data.isOnline, 
+            isTyping: data.isTyping,
+            lastSeen: data.lastSeen 
+          }
+        });
       });
       
+      console.log('🔄 Updating userStatuses state with:', newStatuses);
       setUserStatuses(newStatuses);
     }, (error) => {
-      console.error('Error listening to status updates:', error);
+      console.error('❌ Error listening to status updates:', error);
     });
 
     return () => {
