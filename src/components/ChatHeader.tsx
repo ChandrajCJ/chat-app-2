@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { User, UserStatuses, Message, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
 import { ArrowLeft, UserRound, Settings } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import ColorSchemeSelector from './ColorSchemeSelector';
 import MessageActionsModal from './MessageActionsModal';
 import BiometricSettingsModal from './BiometricSettingsModal';
 import { formatDistanceToNow } from 'date-fns';
@@ -79,8 +78,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        <ColorSchemeSelector />
-        
         {/* Settings Button */}
         <button
           onClick={() => setIsSettingsOpen(true)}
