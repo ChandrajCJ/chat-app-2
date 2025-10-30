@@ -8,6 +8,7 @@ import {
   authenticateWithBiometric,
   getBiometricTypeName 
 } from '../utils/biometricAuth';
+import { trackLogin } from '../services/loginTracking';
 
 const UserSelection: React.FC = () => {
   const { setUser } = useUser();
@@ -26,13 +27,17 @@ const UserSelection: React.FC = () => {
     useRef<HTMLInputElement>(null),
   ];
 
-  const validatePin = (newPin: string[]) => {
+  const validatePin = async (newPin: string[]) => {
     const pinString = newPin.join('');
     if (pinString.length === 4) {
       if (pinString === '1204') {
         setUser('🐞');
+        // Track successful PIN login
+        await trackLogin('🐞', 'pin', true);
       } else if (pinString === '1710') {
         setUser('🦎');
+        // Track successful PIN login
+        await trackLogin('🦎', 'pin', true);
       } else {
         setError(true);
         setPin(['', '', '', '']);
@@ -77,6 +82,8 @@ const UserSelection: React.FC = () => {
       const user = await authenticateWithBiometric();
       if (user) {
         setUser(user);
+        // Track successful biometric login
+        await trackLogin(user, 'biometric', true);
       } else {
         setBiometricError('No user found. Please use PIN to login.');
       }
