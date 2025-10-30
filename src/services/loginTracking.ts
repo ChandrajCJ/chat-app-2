@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { User, LoginInfo } from '../types';
 
@@ -111,7 +111,7 @@ const getLocationInfo = async () => {
     // Try to fetch more accurate location from a free IP API
     try {
       const response = await fetch('https://ipapi.co/json/', {
-        signal: AbortSignal.timeout(3000), // 3 second timeout
+        signal: AbortSignal.timeout(1500), // 1.5 second timeout (reduced for faster login)
       });
       
       if (response.ok) {
