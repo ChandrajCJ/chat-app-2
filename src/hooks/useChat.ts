@@ -27,18 +27,14 @@ export const useChat = (currentUser: User) => {
   const markReadTimeoutRef = useRef<NodeJS.Timeout>();
   const isTypingRef = useRef<boolean>(false);
   const isOnlineRef = useRef<boolean>(false);
-  const sessionIdRef = useRef<string>(Date.now().toString()); // Unique session ID
 
   // Immediate status update function (no debouncing for critical updates)
   const updateStatusImmediately = useCallback(async (updates: any) => {
     try {
       const userStatusRef = doc(db, 'status', currentUser);
-      const clientTimestamp = Date.now(); // Client timestamp as backup
       await setDoc(userStatusRef, {
         ...updates,
-        lastSeen: serverTimestamp(),
-        lastSeenClient: clientTimestamp, // Backup client timestamp
-        sessionId: sessionIdRef.current // Add session ID to prevent stale updates
+        lastSeen: serverTimestamp()
       }, { merge: true });
     } catch (error) {
       console.error('Error updating status immediately:', error);
@@ -54,13 +50,10 @@ export const useChat = (currentUser: User) => {
         isOnlineRef.current = false;
         try {
           const userStatusRef = doc(db, 'status', currentUser);
-          const clientTimestamp = Date.now();
           await updateDoc(userStatusRef, {
             lastSeen: serverTimestamp(),
-            lastSeenClient: clientTimestamp,
             isOnline: false,
-            isTyping: false,
-            sessionId: sessionIdRef.current
+            isTyping: false
           });
         } catch (error) {
           console.error('Error updating offline status in heartbeat:', error);
@@ -71,13 +64,10 @@ export const useChat = (currentUser: User) => {
     
     try {
       const userStatusRef = doc(db, 'status', currentUser);
-      const clientTimestamp = Date.now();
       await updateDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
-        lastSeenClient: clientTimestamp,
         isOnline: true,
-        isTyping: isTypingRef.current, // Maintain current typing status
-        sessionId: sessionIdRef.current
+        isTyping: isTypingRef.current // Maintain current typing status
       });
     } catch (error) {
       console.error('Error sending heartbeat:', error);
@@ -200,15 +190,12 @@ export const useChat = (currentUser: User) => {
       // Use navigator.sendBeacon for more reliable offline status update
       isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
-      const clientTimestamp = Date.now();
       
       // Try sendBeacon first (more reliable), fallback to regular update
       const data = JSON.stringify({
         isOnline: false,
         isTyping: false,
-        lastSeen: new Date().toISOString(),
-        lastSeenClient: clientTimestamp,
-        sessionId: sessionIdRef.current
+        lastSeen: new Date().toISOString()
       });
       
       if (navigator.sendBeacon) {
@@ -249,39 +236,19 @@ export const useChat = (currentUser: User) => {
     // Listen to status changes with real-time updates
     const statusRef = collection(db, 'status');
     const unsubscribeStatus = onSnapshot(statusRef, (snapshot) => {
-      // Build fresh status object from snapshot data only (avoid stale closure)
-      const newStatuses: UserStatuses = {
-        '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
-        '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
-      };
+      const newStatuses = { ...userStatuses };
       
       snapshot.docs.forEach((doc) => {
         const user = doc.id as User;
         const data = doc.data();
-        
-        // Handle lastSeen timestamp with client timestamp fallback
-        let lastSeen: Date;
-        if (data.lastSeen) {
-          // If server timestamp exists, use it
-          lastSeen = data.lastSeen.toDate();
-        } else if (data.lastSeenClient) {
-          // If server timestamp is pending, use client timestamp
-          lastSeen = new Date(data.lastSeenClient);
-        } else {
-          // Fallback to current time if neither exists
-          lastSeen = new Date();
-        }
+        const lastSeen = data.lastSeen?.toDate() || new Date();
         
         // Consider user offline if last seen is more than 45 seconds ago (3x heartbeat interval)
-        const timeSinceLastSeen = new Date().getTime() - lastSeen.getTime();
-        const isRecentlyActive = timeSinceLastSeen < 45000; // 45 seconds
-        
-        // User is only online if they have the online flag AND they're recently active
-        const isActuallyOnline = Boolean(data.isOnline) && isRecentlyActive;
+        const isRecentlyActive = (new Date().getTime() - lastSeen.getTime()) < 45000; // 45 seconds
         
         newStatuses[user] = {
           lastSeen,
-          isOnline: isActuallyOnline,
+          isOnline: Boolean(data.isOnline && isRecentlyActive),
           isTyping: data.isTyping || false
         };
       });
@@ -315,32 +282,14 @@ export const useChat = (currentUser: User) => {
         clearTimeout(markReadTimeoutRef.current);
       }
 
-      // Final offline status update - only if this is still the active session
+      // Final offline status update
       isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
-      const currentSessionId = sessionIdRef.current;
-      const clientTimestamp = Date.now();
-      
-      // Check if this session is still the active one before marking offline
-      getDoc(userStatusRef).then((docSnapshot) => {
-        if (docSnapshot.exists()) {
-          const data = docSnapshot.data();
-          // Only mark offline if this is still the active session
-          if (data.sessionId === currentSessionId) {
-            setDoc(userStatusRef, {
-              lastSeen: serverTimestamp(),
-              lastSeenClient: clientTimestamp,
-              isOnline: false,
-              isTyping: false,
-              sessionId: currentSessionId
-            }, { merge: true }).catch(() => {
-              // Ignore errors during cleanup
-            });
-          } else {
-            console.log('Session changed, skipping offline status update');
-          }
-        }
-      }).catch(() => {
+      setDoc(userStatusRef, {
+        lastSeen: serverTimestamp(),
+        isOnline: false,
+        isTyping: false
+      }, { merge: true }).catch(() => {
         // Ignore errors during cleanup
       });
     };
@@ -355,30 +304,18 @@ export const useChat = (currentUser: User) => {
 
     try {
       const userStatusRef = doc(db, 'status', currentUser);
-      const clientTimestamp = Date.now();
       
       if (isTyping) {
         // Immediately update typing status
         if (!isTypingRef.current) {
-          await updateDoc(userStatusRef, { 
-            isTyping: true,
-            lastSeen: serverTimestamp(),
-            lastSeenClient: clientTimestamp,
-            sessionId: sessionIdRef.current
-          });
+          await updateDoc(userStatusRef, { isTyping: true });
           isTypingRef.current = true;
         }
         
         // Auto-clear typing status after 2 seconds (reduced from 3)
         typingTimeoutRef.current = setTimeout(async () => {
           try {
-            const clientTimestamp = Date.now();
-            await updateDoc(userStatusRef, { 
-              isTyping: false,
-              lastSeen: serverTimestamp(),
-              lastSeenClient: clientTimestamp,
-              sessionId: sessionIdRef.current
-            });
+            await updateDoc(userStatusRef, { isTyping: false });
             isTypingRef.current = false;
           } catch (error) {
             console.error('Error clearing typing status:', error);
@@ -387,12 +324,7 @@ export const useChat = (currentUser: User) => {
       } else {
         // Immediately clear typing status
         if (isTypingRef.current) {
-          await updateDoc(userStatusRef, { 
-            isTyping: false,
-            lastSeen: serverTimestamp(),
-            lastSeenClient: clientTimestamp,
-            sessionId: sessionIdRef.current
-          });
+          await updateDoc(userStatusRef, { isTyping: false });
           isTypingRef.current = false;
         }
       }
