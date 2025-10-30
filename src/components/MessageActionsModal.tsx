@@ -38,7 +38,8 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [currentResultIndex, setCurrentResultIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
-  const [allMessages, setAllMessages] = useState<Message[]>(messages);
+  const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const [hasLoadedAllMessages, setHasLoadedAllMessages] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -65,24 +66,30 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
 
   // Load all messages when search modal opens (only once per session)
   useEffect(() => {
-    if (isOpen && onLoadAllMessages && !isSearching) {
-      // Only load if we haven't already loaded all messages or if we only have the paginated subset
-      const shouldLoadAllMessages = allMessages.length <= messages.length;
-      
-      if (shouldLoadAllMessages) {
-        setIsSearching(true);
-        onLoadAllMessages().then((loadedMessages) => {
+    if (isOpen && onLoadAllMessages && !hasLoadedAllMessages && !isSearching) {
+      console.log('Loading all messages for search...');
+      setIsSearching(true);
+      onLoadAllMessages()
+        .then((loadedMessages) => {
+          console.log('Loaded messages:', loadedMessages.length);
           setAllMessages(loadedMessages);
+          setHasLoadedAllMessages(true);
           setIsSearching(false);
-        }).catch((error) => {
+        })
+        .catch((error) => {
           console.error('Error loading all messages:', error);
-          setIsSearching(false);
           // Fallback to current messages if loading fails
           setAllMessages(messages);
+          setHasLoadedAllMessages(true);
+          setIsSearching(false);
         });
-      }
+    } else if (isOpen && !hasLoadedAllMessages && !onLoadAllMessages) {
+      // If no loading function provided, use current messages
+      console.log('No load function, using current messages:', messages.length);
+      setAllMessages(messages);
+      setHasLoadedAllMessages(true);
     }
-  }, [isOpen, onLoadAllMessages, allMessages.length, messages.length, isSearching]);
+  }, [isOpen, onLoadAllMessages, hasLoadedAllMessages, isSearching, messages]);
 
   // Search functionality
   useEffect(() => {
@@ -250,9 +257,9 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isSearching ? "Loading all messages..." : "Search in conversation..."}
+              placeholder={isSearching ? "Loading messages..." : "Search in conversation..."}
               disabled={isSearching}
-              className="block w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+              className="block w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
             {searchQuery && (
               <button
@@ -268,11 +275,11 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
           {searchQuery && (
             <div className="mt-2 flex items-center justify-between">
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                {isSearching
-                  ? 'Loading messages...'
-                  : searchResults.length > 0 
-                    ? `${currentResultIndex + 1} of ${searchResults.length} results`
-                    : `No results found (searched ${allMessages.length} messages)`
+                {searchResults.length > 0 
+                  ? `${currentResultIndex + 1} of ${searchResults.length} results`
+                  : allMessages.length > 0
+                    ? `No results found (searched ${allMessages.length} messages)`
+                    : 'No messages to search'
                 }
               </span>
               {searchResults.length > 1 && (
@@ -296,6 +303,16 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Loading indicator */}
+        {isSearching && (
+          <div className="px-3 py-6 text-center border-t border-gray-100 dark:border-gray-700">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Loading messages...</span>
+            </div>
+          </div>
+        )}
 
         {/* Search Results */}
         {searchQuery && !isSearching && searchResults.length > 0 && (
@@ -330,7 +347,7 @@ const MessageActionsModal: React.FC<MessageActionsModalProps> = ({
         )}
 
         {/* No results message */}
-        {searchQuery && !isSearching && searchResults.length === 0 && (
+        {searchQuery && searchResults.length === 0 && allMessages.length > 0 && (
           <div className="px-3 py-4 text-center border-t border-gray-100 dark:border-gray-700">
             <div className="text-sm text-gray-500 dark:text-gray-400 break-words">
               No messages found matching "<span className="font-medium">{searchQuery}</span>"
