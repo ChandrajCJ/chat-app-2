@@ -1063,11 +1063,10 @@ export const useChat = (currentUser: User) => {
       const targetDocRef = doc(db, 'messages', targetMessageId);
       
       try {
-        const targetDocSnapshot = await getDocs(query(messagesRef, where('__name__', '==', targetDocRef)));
+        const targetDocSnapshot = await getDoc(targetDocRef);
         
-        if (!targetDocSnapshot.empty) {
-          const targetDoc = targetDocSnapshot.docs[0];
-          const targetData = targetDoc.data();
+        if (targetDocSnapshot.exists()) {
+          const targetData = targetDocSnapshot.data();
           const targetTimestamp = targetData.timestamp;
 
           if (targetTimestamp) {
