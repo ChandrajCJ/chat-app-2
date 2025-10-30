@@ -31,13 +31,19 @@ const UserSelection: React.FC = () => {
     const pinString = newPin.join('');
     if (pinString.length === 4) {
       if (pinString === '1204') {
+        // Track successful PIN login (don't await - fire and forget)
+        trackLogin('🐞', 'pin', true).catch(err => 
+          console.error('Login tracking failed:', err)
+        );
+        // Set user immediately without waiting for tracking
         setUser('🐞');
-        // Track successful PIN login
-        await trackLogin('🐞', 'pin', true);
       } else if (pinString === '1710') {
+        // Track successful PIN login (don't await - fire and forget)
+        trackLogin('🦎', 'pin', true).catch(err => 
+          console.error('Login tracking failed:', err)
+        );
+        // Set user immediately without waiting for tracking
         setUser('🦎');
-        // Track successful PIN login
-        await trackLogin('🦎', 'pin', true);
       } else {
         setError(true);
         setPin(['', '', '', '']);
@@ -81,9 +87,12 @@ const UserSelection: React.FC = () => {
     try {
       const user = await authenticateWithBiometric();
       if (user) {
+        // Track successful biometric login (don't await - fire and forget)
+        trackLogin(user, 'biometric', true).catch(err => 
+          console.error('Login tracking failed:', err)
+        );
+        // Set user immediately without waiting for tracking
         setUser(user);
-        // Track successful biometric login
-        await trackLogin(user, 'biometric', true);
       } else {
         setBiometricError('No user found. Please use PIN to login.');
       }
