@@ -63,3 +63,21 @@ export interface ScheduledMessage {
     sender: User;
   };
 }
+
+export interface LoginInfo {
+  id: string;
+  user: User;
+  timestamp: Date;
+  device: string; // Device type (e.g., "MacBook Pro", "iPhone 14", "Windows PC")
+  browser: string; // Browser name and version
+  os: string; // Operating system
+  location?: {
+    city?: string;
+    region?: string;
+    country?: string;
+    timezone?: string;
+  };
+  ipAddress?: string;
+  loginMethod: 'pin' | 'biometric';
+  success: boolean;
+}
