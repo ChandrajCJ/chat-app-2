@@ -63,17 +63,25 @@ const MessageList: React.FC<MessageListProps> = ({
     const wasScrolledUp = isUserScrolledUpRef.current;
     isUserScrolledUpRef.current = scrollFromBottom > 100;
     
+    // Update scroll to bottom button visibility based on current scroll position
+    if (scrollFromBottom > 100) {
+      // User is scrolled up - show button if not already shown
+      if (!showScrollToBottomButton) {
+        setShowScrollToBottomButton(true);
+      }
+    } else {
+      // User is at bottom - hide button if shown
+      if (showScrollToBottomButton) {
+        setShowScrollToBottomButton(false);
+      }
+    }
+    
     // If user scrolled to bottom, clear new messages banner
     if (wasScrolledUp && !isUserScrolledUpRef.current && showNewMessagesBanner) {
       setNewMessagesCount(0);
       setShowNewMessagesBanner(false);
     }
-    
-    // If user scrolled to bottom, hide scroll to bottom button
-    if (wasScrolledUp && !isUserScrolledUpRef.current && showScrollToBottomButton) {
-      setShowScrollToBottomButton(false);
-    }
-  }, [showNewMessagesBanner]);
+  }, [showNewMessagesBanner, showScrollToBottomButton]);
 
   // Automatic load more function with cooldown
   const handleLoadMore = useCallback(() => {
