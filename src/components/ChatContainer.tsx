@@ -4,6 +4,7 @@ import { useChat } from '../hooks/useChat';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
+import PinnedMessagesBar from './PinnedMessagesBar';
 
 interface ChatContainerProps {
   currentUser: User;
@@ -29,7 +30,16 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
     scheduleMessage,
     deleteScheduledMessage,
     toggleScheduledMessage,
-    scheduledMessages
+    scheduledMessages,
+    // New features
+    draft,
+    draftReplyTo,
+    saveDraft,
+    loadDraft,
+    clearDraft,
+    pinMessage,
+    unpinMessage,
+    pinnedMessages
   } = useChat(currentUser);
   const [replyingTo, setReplyingTo] = useState<Message | undefined>();
 
@@ -73,6 +83,23 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         scheduledMessages={scheduledMessages}
       />
       
+      {/* Pinned Messages Bar */}
+      <PinnedMessagesBar
+        pinnedMessages={pinnedMessages}
+        onUnpin={unpinMessage}
+        onScrollToMessage={(messageId: string) => {
+          const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+          if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            messageElement.classList.add('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            setTimeout(() => {
+              messageElement.classList.remove('bg-gray-200/40', 'dark:bg-gray-700/20', 'border-l-4', 'border-primary-500/60', 'shadow-md', 'shadow-gray-500/5');
+            }, 3000);
+          }
+        }}
+        currentUser={currentUser}
+      />
+      
       <MessageList 
         messages={messages} 
         currentUser={currentUser}
@@ -85,6 +112,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         onDelete={deleteMessage}
         onReact={reactToMessage}
         onRemoveReaction={removeReaction}
+        onPin={pinMessage}
+        onUnpin={unpinMessage}
         onScrollToMessage={(messageId: string) => {
           // Find the message element and scroll to it
           const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
@@ -107,6 +136,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(undefined)}
         onTyping={setTypingStatus}
+        draft={draft}
+        draftReplyTo={draftReplyTo}
+        onSaveDraft={saveDraft}
+        onClearDraft={clearDraft}
       />
     </div>
   );
