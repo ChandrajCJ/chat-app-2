@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Fingerprint, AlertCircle, CheckCircle2, Loader2, MapPin, Monitor, Clock, Shield, Palette, Sun, Moon, Check, Sparkles, Lock, ChevronRight, ArrowLeft, Filter, User as UserIcon, Key, Smartphone, Laptop, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Fingerprint, AlertCircle, CheckCircle2, Loader2, MapPin, Monitor, Clock, Shield, Palette, Sun, Moon, Check, Sparkles, Lock, ChevronRight, ArrowLeft, Filter, User as UserIcon, Key, Smartphone, Laptop, Globe, ChevronDown, ChevronUp, Tablet } from 'lucide-react';
 import { User, LoginInfo } from '../types';
 import {
   isBiometricAvailable,
@@ -245,6 +245,30 @@ const BiometricSettingsModal: React.FC<BiometricSettingsModalProps> = ({
     return Array.from(browsers).sort();
   };
 
+  // Get device icon based on device string
+  const getDeviceIcon = (device: string) => {
+    const deviceLower = device.toLowerCase();
+    
+    // Mobile devices
+    if (deviceLower.includes('iphone') || deviceLower.includes('android') || 
+        deviceLower.includes('mobile') || deviceLower.includes('phone')) {
+      return <Smartphone className="w-3 h-3 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Tablets
+    if (deviceLower.includes('ipad') || deviceLower.includes('tablet')) {
+      return <Tablet className="w-3 h-3 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Laptops
+    if (deviceLower.includes('macbook') || deviceLower.includes('laptop') || 
+        deviceLower.includes('notebook')) {
+      return <Laptop className="w-3 h-3 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Desktop (default)
+    return <Monitor className="w-3 h-3 mt-0.5 flex-shrink-0" />;
+  };
 
   const checkBiometricStatus = async () => {
     setCheckingAvailability(true);
@@ -715,7 +739,6 @@ const BiometricSettingsModal: React.FC<BiometricSettingsModalProps> = ({
                   }`}
                 >
                   <span className="text-sm">🐞</span>
-                  <span>Lady Bug</span>
                 </button>
                 <button
                   onClick={() => setUserFilter('🦎')}
@@ -726,7 +749,6 @@ const BiometricSettingsModal: React.FC<BiometricSettingsModalProps> = ({
                   }`}
                 >
                   <span className="text-sm">🦎</span>
-                  <span>Lizard</span>
                 </button>
               </div>
             </div>
@@ -873,7 +895,7 @@ const BiometricSettingsModal: React.FC<BiometricSettingsModalProps> = ({
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
-                  <Monitor className="w-3 h-3" />
+                  <Tablet className="w-3 h-3" />
                   <span>Tablet</span>
                 </button>
               </div>
@@ -1082,7 +1104,7 @@ const BiometricSettingsModal: React.FC<BiometricSettingsModalProps> = ({
 
                 {/* Device and Browser Info */}
                 <div className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                  <Monitor className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  {getDeviceIcon(login.device)}
                   <div className="flex flex-wrap gap-1">
                     <span>{login.device}</span>
                     <span>•</span>
