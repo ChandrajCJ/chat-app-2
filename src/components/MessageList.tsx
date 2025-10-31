@@ -17,6 +17,8 @@ interface MessageListProps {
   onRemoveReaction: (messageId: string) => void;
   onScrollToMessage?: (messageId: string) => void;
   onLoadMessagesUntil?: (messageId: string) => Promise<boolean>;
+  onPin?: (messageId: string) => void;
+  onUnpin?: (messageId: string) => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({ 
@@ -32,7 +34,9 @@ const MessageList: React.FC<MessageListProps> = ({
   onReact,
   onRemoveReaction,
   onScrollToMessage: externalScrollToMessage,
-  onLoadMessagesUntil
+  onLoadMessagesUntil,
+  onPin,
+  onUnpin
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -308,6 +312,8 @@ const MessageList: React.FC<MessageListProps> = ({
               onReact={onReact}
               onRemoveReaction={onRemoveReaction}
               scrollToMessage={scrollToMessage}
+              onPin={onPin}
+              onUnpin={onUnpin}
             />
           ))}
           {isOtherUserTyping && <TypingIndicator />}
