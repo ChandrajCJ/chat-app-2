@@ -18,6 +18,8 @@ export const useChat = (currentUser: User) => {
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
   const [scheduledMessages, setScheduledMessages] = useState<ScheduledMessage[]>([]);
+  const [draft, setDraft] = useState<string>(''); // Current draft text
+  const [draftReplyTo, setDraftReplyTo] = useState<Message['replyTo'] | undefined>();
 
   // Refs for optimization
   const statusUpdateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -474,7 +476,10 @@ export const useChat = (currentUser: User) => {
               editedAt: h.editedAt?.toDate()
             })) || [],
             voiceUrl: data.voiceUrl,
-            reaction: data.reaction
+            reaction: data.reaction,
+            isPinned: data.isPinned || false,
+            pinnedBy: data.pinnedBy,
+            pinnedAt: data.pinnedAt?.toDate()
           } as Message;
         }).reverse(); // Reverse to get chronological order
 
@@ -573,7 +578,11 @@ export const useChat = (currentUser: User) => {
             editedAt: h.editedAt?.toDate()
           })) || [],
           voiceUrl: data.voiceUrl,
-          reaction: data.reaction
+          reaction: data.reaction,
+          reactions: data.reactions || {},
+          isPinned: data.isPinned || false,
+          pinnedBy: data.pinnedBy,
+          pinnedAt: data.pinnedAt?.toDate()
         } as Message;
       }).reverse(); // Reverse to get chronological order
 
@@ -672,7 +681,11 @@ export const useChat = (currentUser: User) => {
             editedAt: h.editedAt?.toDate()
           })) || [],
           voiceUrl: data.voiceUrl,
-          reaction: data.reaction
+          reaction: data.reaction,
+          reactions: data.reactions || {},
+          isPinned: data.isPinned || false,
+          pinnedBy: data.pinnedBy,
+          pinnedAt: data.pinnedAt?.toDate()
         } as Message;
 
         if (change.type === 'added') {
@@ -1128,7 +1141,11 @@ export const useChat = (currentUser: User) => {
             editedAt: h.editedAt?.toDate()
           })) || [],
           voiceUrl: data.voiceUrl,
-          reaction: data.reaction
+          reaction: data.reaction,
+          reactions: data.reactions || {},
+          isPinned: data.isPinned || false,
+          pinnedBy: data.pinnedBy,
+          pinnedAt: data.pinnedAt?.toDate()
         } as Message;
       }).reverse();
       
@@ -1192,7 +1209,11 @@ export const useChat = (currentUser: User) => {
                     editedAt: h.editedAt?.toDate()
                   })) || [],
                   voiceUrl: data.voiceUrl,
-                  reaction: data.reaction
+                  reaction: data.reaction,
+                  reactions: data.reactions || {},
+                  isPinned: data.isPinned || false,
+                  pinnedBy: data.pinnedBy,
+                  pinnedAt: data.pinnedAt?.toDate()
                 } as Message;
               }).reverse();
 
@@ -1299,7 +1320,11 @@ export const useChat = (currentUser: User) => {
             editedAt: h.editedAt?.toDate()
           })) || [],
           voiceUrl: data.voiceUrl,
-          reaction: data.reaction
+          reaction: data.reaction,
+          reactions: data.reactions || {},
+          isPinned: data.isPinned || false,
+          pinnedBy: data.pinnedBy,
+          pinnedAt: data.pinnedAt?.toDate()
         } as Message;
       }).reverse();
 
@@ -1329,6 +1354,96 @@ export const useChat = (currentUser: User) => {
     return foundMessage;
   }, [pagination, messages]);
 
+  // ===== DRAFT MANAGEMENT =====
+  
+  // Auto-save draft to Firestore
+  const saveDraft = useCallback(async (text: string, replyTo?: Message['replyTo']) => {
+    try {
+      const draftRef = doc(db, 'drafts', currentUser);
+      await setDoc(draftRef, {
+        user: currentUser,
+        text,
+        replyTo: replyTo || null,
+        lastUpdated: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }, { merge: true });
+      
+      setDraft(text);
+      setDraftReplyTo(replyTo);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    }
+  }, [currentUser]);
+
+  // Load draft from Firestore
+  const loadDraft = useCallback(async () => {
+    try {
+      const draftRef = doc(db, 'drafts', currentUser);
+      const draftDoc = await getDoc(draftRef);
+      
+      if (draftDoc.exists()) {
+        const data = draftDoc.data();
+        setDraft(data.text || '');
+        setDraftReplyTo(data.replyTo || undefined);
+        return { text: data.text || '', replyTo: data.replyTo };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading draft:', error);
+      return null;
+    }
+  }, [currentUser]);
+
+  // Clear draft from Firestore
+  const clearDraft = useCallback(async () => {
+    try {
+      const draftRef = doc(db, 'drafts', currentUser);
+      await deleteDoc(draftRef);
+      setDraft('');
+      setDraftReplyTo(undefined);
+    } catch (error) {
+      console.error('Error clearing draft:', error);
+    }
+  }, [currentUser]);
+
+  // Load draft on mount
+  useEffect(() => {
+    loadDraft();
+  }, [loadDraft]);
+
+  // ===== PIN MESSAGES =====
+  
+  // Pin a message
+  const pinMessage = useCallback(async (messageId: string) => {
+    try {
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, {
+        isPinned: true,
+        pinnedBy: currentUser,
+        pinnedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error pinning message:', error);
+    }
+  }, [currentUser]);
+
+  // Unpin a message
+  const unpinMessage = useCallback(async (messageId: string) => {
+    try {
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, {
+        isPinned: false,
+        pinnedBy: null,
+        pinnedAt: null
+      });
+    } catch (error) {
+      console.error('Error unpinning message:', error);
+    }
+  }, [currentUser]);
+
+  // Get pinned messages
+  const pinnedMessages = messages.filter(m => m.isPinned);
+
   return { 
     messages, 
     sendMessage, 
@@ -1342,12 +1457,21 @@ export const useChat = (currentUser: User) => {
     deleteMessage,
     deleteAllMessages,
     reactToMessage,
-    removeReaction,
+    removeReaction: removeReaction as (messageId: string) => Promise<void>, // Legacy single reaction removal
     setTypingStatus,
     sendVoiceMessage,
     scheduleMessage,
     deleteScheduledMessage,
     toggleScheduledMessage,
-    scheduledMessages
+    scheduledMessages,
+    // New features
+    draft,
+    draftReplyTo,
+    saveDraft,
+    loadDraft,
+    clearDraft,
+    pinMessage,
+    unpinMessage,
+    pinnedMessages
   };
 };
