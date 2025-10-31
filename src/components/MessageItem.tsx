@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, User, ReactionType } from '../types';
 import { format } from 'date-fns';
-import { CheckCheck, Check, Reply, CreditCard as Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus, Info, History } from 'lucide-react';
+import { CheckCheck, Check, Reply, CreditCard as Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus, Info, History, Pin, PinOff } from 'lucide-react';
+import { MarkdownRenderer } from '../utils/markdown';
 
 interface MessageItemProps {
   message: Message;
@@ -12,6 +13,8 @@ interface MessageItemProps {
   onReact: (messageId: string, emoji: ReactionType) => void;
   onRemoveReaction: (messageId: string) => void;
   scrollToMessage?: (messageId: string) => void;
+  onPin?: (messageId: string) => void;
+  onUnpin?: (messageId: string) => void;
 }
 
 const REACTIONS: ReactionType[] = ['🖤', '👀', '😭', '🌚', '🤣'];
@@ -94,7 +97,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
   onDelete,
   onReact,
   onRemoveReaction,
-  scrollToMessage
+  scrollToMessage,
+  onPin,
+  onUnpin
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
@@ -436,7 +441,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="mt-1 break-words whitespace-pre-wrap sm:text-base">{message.text}</p>
+              <div className="mt-1">
+                <MarkdownRenderer content={message.text} className="break-words sm:text-base" />
+              </div>
             )}
 
 
@@ -469,6 +476,31 @@ const MessageItem: React.FC<MessageItemProps> = ({
                           History
                         </button>
                       )}
+                      {/* Pin/Unpin - Available to all users */}
+                      {message.isPinned ? (
+                        <button
+                          onClick={() => {
+                            onUnpin?.(message.id);
+                            setShowMenu(false);
+                          }}
+                          className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
+                        >
+                          <PinOff size={14} />
+                          Unpin
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            onPin?.(message.id);
+                            setShowMenu(false);
+                          }}
+                          className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-colors"
+                        >
+                          <Pin size={14} />
+                          Pin
+                        </button>
+                      )}
+                      
                       {isOwnMessage && (
                         <>
                           <button
