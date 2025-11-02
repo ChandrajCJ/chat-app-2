@@ -33,7 +33,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
     scheduledMessages,
     pinMessage,
     unpinMessage,
-    pinnedMessages
+    pinnedMessages,
+    markAsOffline
   } = useChat(currentUser);
   const [replyingTo, setReplyingTo] = useState<Message | undefined>();
 
@@ -75,6 +76,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         onDeleteScheduledMessage={deleteScheduledMessage}
         onToggleScheduledMessage={toggleScheduledMessage}
         scheduledMessages={scheduledMessages}
+        onMarkAsOffline={markAsOffline}
       />
       
       {/* Pinned Messages Bar */}
