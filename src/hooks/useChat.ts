@@ -18,8 +18,7 @@ export const useChat = (currentUser: User) => {
     '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
   });
   const [scheduledMessages, setScheduledMessages] = useState<ScheduledMessage[]>([]);
-  const [draft, setDraft] = useState<string>(''); // Current draft text
-  const [draftReplyTo, setDraftReplyTo] = useState<Message['replyTo'] | undefined>();
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
 
   // Refs for optimization
   const statusUpdateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -159,13 +158,20 @@ export const useChat = (currentUser: User) => {
           }, { merge: true });
           console.log(`✅ ${user} initialized as ONLINE`);
         } else {
-          // For other user, just ensure document exists with offline status
-          await setDoc(statusRef, {
-            isOnline: false,
-            isTyping: false,
-            lastSeen: serverTimestamp()
-          }, { merge: true });
-          console.log(`✅ ${user} initialized as OFFLINE`);
+          // For other user, just ensure document exists WITHOUT updating lastSeen
+          // Check if document exists first
+          const docSnap = await getDoc(statusRef);
+          if (!docSnap.exists()) {
+            // Only create if it doesn't exist
+            await setDoc(statusRef, {
+              isOnline: false,
+              isTyping: false,
+              lastSeen: serverTimestamp()
+            });
+            console.log(`✅ ${user} initialized as OFFLINE (new document)`);
+          } else {
+            console.log(`✅ ${user} document already exists, not updating lastSeen`);
+          }
         }
       });
       await Promise.all(initPromises);
@@ -1116,6 +1122,57 @@ export const useChat = (currentUser: User) => {
     };
   }, [currentUser]);
 
+  // Listen to pinned messages - separate query to load all pinned messages
+  useEffect(() => {
+    console.log('👂 Setting up pinned messages listener');
+    
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef,
+      where('isPinned', '==', true),
+      orderBy('pinnedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log(`📌 Received pinned messages update: ${snapshot.docs.length} pinned messages`);
+      
+      const pinned = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text || '',
+          sender: data.sender,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          delivered: data.delivered || false,
+          deliveredAt: data.deliveredAt?.toDate(),
+          read: data.read || false,
+          readAt: data.readAt?.toDate(),
+          replyTo: data.replyTo,
+          edited: data.edited || false,
+          editHistory: data.editHistory?.map((h: any) => ({
+            text: h.text,
+            editedAt: h.editedAt?.toDate()
+          })) || [],
+          voiceUrl: data.voiceUrl,
+          reaction: data.reaction,
+          isPinned: data.isPinned || false,
+          pinnedBy: data.pinnedBy,
+          pinnedAt: data.pinnedAt?.toDate()
+        } as Message;
+      });
+      
+      console.log('📋 Updated pinned messages state:', pinned.length);
+      setPinnedMessages(pinned);
+    }, (error) => {
+      console.error('❌ Error listening to pinned messages:', error);
+    });
+
+    return () => {
+      console.log('🔌 Unsubscribing from pinned messages listener');
+      unsubscribe();
+    };
+  }, []);
+
   // Function to load all messages for search
   const loadAllMessagesForSearch = useCallback(async () => {
     try {
@@ -1354,63 +1411,6 @@ export const useChat = (currentUser: User) => {
     return foundMessage;
   }, [pagination, messages]);
 
-  // ===== DRAFT MANAGEMENT =====
-  
-  // Auto-save draft to Firestore
-  const saveDraft = useCallback(async (text: string, replyTo?: Message['replyTo']) => {
-    try {
-      const draftRef = doc(db, 'drafts', currentUser);
-      await setDoc(draftRef, {
-        user: currentUser,
-        text,
-        replyTo: replyTo || null,
-        lastUpdated: serverTimestamp(),
-        createdAt: serverTimestamp()
-      }, { merge: true });
-      
-      setDraft(text);
-      setDraftReplyTo(replyTo);
-    } catch (error) {
-      console.error('Error saving draft:', error);
-    }
-  }, [currentUser]);
-
-  // Load draft from Firestore
-  const loadDraft = useCallback(async () => {
-    try {
-      const draftRef = doc(db, 'drafts', currentUser);
-      const draftDoc = await getDoc(draftRef);
-      
-      if (draftDoc.exists()) {
-        const data = draftDoc.data();
-        setDraft(data.text || '');
-        setDraftReplyTo(data.replyTo || undefined);
-        return { text: data.text || '', replyTo: data.replyTo };
-      }
-      return null;
-    } catch (error) {
-      console.error('Error loading draft:', error);
-      return null;
-    }
-  }, [currentUser]);
-
-  // Clear draft from Firestore
-  const clearDraft = useCallback(async () => {
-    try {
-      const draftRef = doc(db, 'drafts', currentUser);
-      await deleteDoc(draftRef);
-      setDraft('');
-      setDraftReplyTo(undefined);
-    } catch (error) {
-      console.error('Error clearing draft:', error);
-    }
-  }, [currentUser]);
-
-  // Load draft on mount
-  useEffect(() => {
-    loadDraft();
-  }, [loadDraft]);
-
   // ===== PIN MESSAGES =====
   
   // Pin a message
@@ -1441,9 +1441,6 @@ export const useChat = (currentUser: User) => {
     }
   }, [currentUser]);
 
-  // Get pinned messages
-  const pinnedMessages = messages.filter(m => m.isPinned);
-
   return { 
     messages, 
     sendMessage, 
@@ -1464,12 +1461,6 @@ export const useChat = (currentUser: User) => {
     deleteScheduledMessage,
     toggleScheduledMessage,
     scheduledMessages,
-    // New features
-    draft,
-    draftReplyTo,
-    saveDraft,
-    loadDraft,
-    clearDraft,
     pinMessage,
     unpinMessage,
     pinnedMessages
