@@ -9,7 +9,7 @@ export interface MessageHistory {
 
 export interface Message {
   id: string;
-  text: string; // Supports markdown formatting
+  text: string;
   sender: User;
   timestamp: Date;
   delivered?: boolean; // Message reached recipient's device/browser
@@ -28,20 +28,6 @@ export interface Message {
   isPinned?: boolean; // Whether message is pinned
   pinnedBy?: User; // Who pinned the message
   pinnedAt?: Date; // When message was pinned
-}
-
-// Draft message interface
-export interface Draft {
-  id: string; // Draft ID (user-specific)
-  user: User; // Who created the draft
-  text: string; // Draft text content
-  replyTo?: {
-    id: string;
-    text: string;
-    sender: User;
-  };
-  lastUpdated: Date; // When draft was last modified
-  createdAt: Date; // When draft was created
 }
 
 export interface UserStatus {
