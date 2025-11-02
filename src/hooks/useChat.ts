@@ -34,6 +34,7 @@ export const useChat = (currentUser: User) => {
     try {
       console.log(`🔄 Updating status immediately for ${currentUser}:`, updates);
       const userStatusRef = doc(db, 'status', currentUser);
+      // Always include lastSeen in updates
       await setDoc(userStatusRef, {
         ...updates,
         lastSeen: serverTimestamp()
@@ -41,6 +42,23 @@ export const useChat = (currentUser: User) => {
       console.log(`✅ Status updated successfully for ${currentUser}`);
     } catch (error) {
       console.error('❌ Error updating status immediately:', error);
+    }
+  }, [currentUser]);
+
+  // Function to mark user as offline (for logout)
+  const markAsOffline = useCallback(async () => {
+    try {
+      console.log(`👋 Marking ${currentUser} as offline...`);
+      isOnlineRef.current = false;
+      const userStatusRef = doc(db, 'status', currentUser);
+      await setDoc(userStatusRef, {
+        lastSeen: serverTimestamp(),
+        isOnline: false,
+        isTyping: false
+      }, { merge: true });
+      console.log(`✅ ${currentUser} marked as offline successfully`);
+    } catch (error) {
+      console.error('❌ Error marking as offline:', error);
     }
   }, [currentUser]);
 
@@ -145,36 +163,32 @@ export const useChat = (currentUser: User) => {
   const initializeStatusDocuments = useCallback(async () => {
     console.log(`🚀 Initializing status documents (current user: ${currentUser})...`);
     try {
-      const users: User[] = ['🐞', '🦎'];
-      const initPromises = users.map(async (user) => {
-        console.log(`📝 Creating/updating status document for ${user}...`);
-        const statusRef = doc(db, 'status', user);
-        // Only initialize if the user is the current user or if document doesn't exist
-        if (user === currentUser) {
-          await setDoc(statusRef, {
-            isOnline: true,
-            isTyping: false,
-            lastSeen: serverTimestamp()
-          }, { merge: true });
-          console.log(`✅ ${user} initialized as ONLINE`);
-        } else {
-          // For other user, just ensure document exists WITHOUT updating lastSeen
-          // Check if document exists first
-          const docSnap = await getDoc(statusRef);
-          if (!docSnap.exists()) {
-            // Only create if it doesn't exist
-            await setDoc(statusRef, {
-              isOnline: false,
-              isTyping: false,
-              lastSeen: serverTimestamp()
-            });
-            console.log(`✅ ${user} initialized as OFFLINE (new document)`);
-          } else {
-            console.log(`✅ ${user} document already exists, not updating lastSeen`);
-          }
-        }
-      });
-      await Promise.all(initPromises);
+      // Always update current user's status with current timestamp
+      console.log(`📝 Creating/updating status document for ${currentUser}...`);
+      const currentUserStatusRef = doc(db, 'status', currentUser);
+      await setDoc(currentUserStatusRef, {
+        isOnline: true,
+        isTyping: false,
+        lastSeen: serverTimestamp()
+      }, { merge: true });
+      console.log(`✅ ${currentUser} initialized as ONLINE with current timestamp`);
+      
+      // For the other user, just ensure document exists if it doesn't
+      const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
+      const otherUserStatusRef = doc(db, 'status', otherUser);
+      const docSnap = await getDoc(otherUserStatusRef);
+      if (!docSnap.exists()) {
+        // Only create if it doesn't exist
+        await setDoc(otherUserStatusRef, {
+          isOnline: false,
+          isTyping: false,
+          lastSeen: serverTimestamp()
+        });
+        console.log(`✅ ${otherUser} initialized as OFFLINE (new document)`);
+      } else {
+        console.log(`✅ ${otherUser} document already exists, not updating lastSeen`);
+      }
+      
       console.log('🎉 All status documents initialized successfully!');
     } catch (error) {
       console.error('❌ Error initializing status documents:', error);
@@ -246,22 +260,11 @@ export const useChat = (currentUser: User) => {
     };
 
     const handleBeforeUnload = () => {
-      // Use navigator.sendBeacon for more reliable offline status update
+      // Use synchronous approach for more reliable offline status update
       isOnlineRef.current = false;
       const userStatusRef = doc(db, 'status', currentUser);
       
-      // Try sendBeacon first (more reliable), fallback to regular update
-      const data = JSON.stringify({
-        isOnline: false,
-        isTyping: false,
-        lastSeen: new Date().toISOString()
-      });
-      
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(`/api/status/${currentUser}`, data);
-      }
-      
-      // Also try regular update as fallback
+      // Use regular update - browser will wait a bit for this
       setDoc(userStatusRef, {
         lastSeen: serverTimestamp(),
         isOnline: false,
@@ -300,8 +303,8 @@ export const useChat = (currentUser: User) => {
       console.log(`📬 Status snapshot received! Document count: ${snapshot.docs.length}`);
       const now = new Date();
       const newStatuses: UserStatuses = {
-        '🐞': { lastSeen: new Date(), isOnline: false, isTyping: false },
-        '🦎': { lastSeen: new Date(), isOnline: false, isTyping: false }
+        '🐞': { lastSeen: new Date(0), isOnline: false, isTyping: false }, // Use epoch as default
+        '🦎': { lastSeen: new Date(0), isOnline: false, isTyping: false }
       };
       
       snapshot.docs.forEach((doc) => {
@@ -309,7 +312,8 @@ export const useChat = (currentUser: User) => {
         const data = doc.data();
         console.log(`📄 Processing status document for ${user}:`, data);
         
-        const lastSeen = data.lastSeen?.toDate() || new Date();
+        // Make sure we have a valid lastSeen timestamp
+        const lastSeen = data.lastSeen?.toDate ? data.lastSeen.toDate() : (data.lastSeen ? new Date(data.lastSeen) : new Date(0));
         
         // Consider user offline if last seen is more than 30 seconds ago (2x heartbeat interval)
         const timeSinceLastSeen = now.getTime() - lastSeen.getTime();
@@ -1463,6 +1467,7 @@ export const useChat = (currentUser: User) => {
     scheduledMessages,
     pinMessage,
     unpinMessage,
-    pinnedMessages
+    pinnedMessages,
+    markAsOffline // Export for logout
   };
 };
