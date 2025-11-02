@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, Mic, Square, Bold, Italic, Code, List, ListOrdered, Strikethrough, Quote } from 'lucide-react';
+import { Send, X, Mic, Square } from 'lucide-react';
 import { Message } from '../types';
-import { wrapSelection, insertAtCursor } from '../utils/markdown';
 
 interface MessageInputProps {
   onSendMessage: (text: string, replyTo?: Message) => void;
@@ -9,10 +8,6 @@ interface MessageInputProps {
   replyingTo?: Message;
   onCancelReply?: () => void;
   onTyping: (isTyping: boolean) => void;
-  draft?: string;
-  draftReplyTo?: Message['replyTo'];
-  onSaveDraft?: (text: string, replyTo?: Message['replyTo']) => void;
-  onClearDraft?: () => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -20,38 +15,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onSendVoice,
   replyingTo,
   onCancelReply,
-  onTyping,
-  draft,
-  draftReplyTo,
-  onSaveDraft,
-  onClearDraft
+  onTyping
 }) => {
-  const [message, setMessage] = useState(draft || '');
+  const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [showFormattingToolbar, setShowFormattingToolbar] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chunks = useRef<Blob[]>([]);
   const timerRef = useRef<number>();
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const streamRef = useRef<MediaStream | null>(null);
-  const draftSaveTimeoutRef = useRef<NodeJS.Timeout>();
-  const justSentMessageRef = useRef<boolean>(false);
-
-  // Load draft on mount (but not if we just sent a message)
-  useEffect(() => {
-    if (draft && !justSentMessageRef.current) {
-      setMessage(draft);
-    }
-    // Reset the flag after a short delay
-    if (justSentMessageRef.current) {
-      const timer = setTimeout(() => {
-        justSentMessageRef.current = false;
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [draft]);
 
   useEffect(() => {
     if (replyingTo) {
@@ -67,9 +41,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      if (draftSaveTimeoutRef.current) {
-        clearTimeout(draftSaveTimeoutRef.current);
-      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -80,18 +51,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
     e.preventDefault();
 
     if (message.trim()) {
-      // Clear any pending draft save before sending
-      if (draftSaveTimeoutRef.current) {
-        clearTimeout(draftSaveTimeoutRef.current);
-      }
-
-      // Mark that we just sent a message to prevent draft reload
-      justSentMessageRef.current = true;
-
       onSendMessage(message, replyingTo);
       setMessage('');
       onTyping(false);
-      onClearDraft?.(); // Clear draft on send
 
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -124,138 +86,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
       // Clear typing immediately if input is empty
       onTyping(false);
     }
-
-    // Auto-save draft after 1 second of inactivity (only if message has content)
-    if (draftSaveTimeoutRef.current) {
-      clearTimeout(draftSaveTimeoutRef.current);
-    }
-
-    // Only save draft if there's actual content
-    if (newMessage.trim()) {
-      draftSaveTimeoutRef.current = setTimeout(() => {
-        onSaveDraft?.(newMessage, replyingTo);
-      }, 1000);
-    } else {
-      // If message is empty, clear the draft
-      onClearDraft?.();
-    }
   };
 
-  // Formatting toolbar handlers
-  const handleBold = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = message.substring(start, end);
-
-      const newText = message.substring(0, start) + '**' + selectedText + '**' + message.substring(end);
-      setMessage(newText);
-
-      // Use requestAnimationFrame for smooth cursor positioning
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 2, end + 2);
-      });
-    }
-  };
-
-  const handleItalic = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = message.substring(start, end);
-
-      const newText = message.substring(0, start) + '*' + selectedText + '*' + message.substring(end);
-      setMessage(newText);
-
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 1, end + 1);
-      });
-    }
-  };
-
-  const handleStrikethrough = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = message.substring(start, end);
-
-      const newText = message.substring(0, start) + '~~' + selectedText + '~~' + message.substring(end);
-      setMessage(newText);
-
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 2, end + 2);
-      });
-    }
-  };
-
-  const handleCode = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = message.substring(start, end);
-
-      const newText = message.substring(0, start) + '`' + selectedText + '`' + message.substring(end);
-      setMessage(newText);
-
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 1, end + 1);
-      });
-    }
-  };
-
-  const handleQuote = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const lineStart = message.lastIndexOf('\n', start - 1) + 1;
-
-      const newText = message.substring(0, lineStart) + '> ' + message.substring(lineStart);
-      setMessage(newText);
-
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 2, start + 2);
-      });
-    }
-  };
-
-  const handleUnorderedList = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const lineStart = message.lastIndexOf('\n', start - 1) + 1;
-
-      const newText = message.substring(0, lineStart) + '- ' + message.substring(lineStart);
-      setMessage(newText);
-
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 2, start + 2);
-      });
-    }
-  };
-
-  const handleOrderedList = () => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const lineStart = message.lastIndexOf('\n', start - 1) + 1;
-
-      const newText = message.substring(0, lineStart) + '1. ' + message.substring(lineStart);
-      setMessage(newText);
-
-      requestAnimationFrame(() => {
-        textarea.setSelectionRange(start + 3, start + 3);
-      });
-    }
-  };
-
-  // Check if user is on mobile device
+  // Check if user is on mobile device (by user agent only, not screen size)
   const isMobile = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      window.innerWidth <= 768;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -348,74 +183,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
           </button>
         </div>
       )}
-
-      {/* Formatting Toolbar */}
-      <div className="flex items-center gap-1 mb-2 px-2 py-1 overflow-x-auto scrollbar-thin">
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleBold}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Bold (Ctrl+B)"
-        >
-          <Bold size={16} />
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleItalic}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Italic (Ctrl+I)"
-        >
-          <Italic size={16} />
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleStrikethrough}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Strikethrough"
-        >
-          <Strikethrough size={16} />
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleCode}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Code"
-        >
-          <Code size={16} />
-        </button>
-        <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleQuote}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Quote"
-        >
-          <Quote size={16} />
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleUnorderedList}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Bullet List"
-        >
-          <List size={16} />
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleOrderedList}
-          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-          title="Numbered List"
-        >
-          <ListOrdered size={16} />
-        </button>
-      </div>
 
       <form onSubmit={handleSubmit} className="flex items-end gap-2">
         <textarea
