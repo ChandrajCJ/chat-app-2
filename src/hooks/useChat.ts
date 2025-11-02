@@ -1426,10 +1426,26 @@ export const useChat = (currentUser: User) => {
         pinnedBy: currentUser,
         pinnedAt: serverTimestamp()
       });
+      
+      // Optimistically update pinnedMessages state immediately
+      const messageToPin = messages.find(m => m.id === messageId);
+      if (messageToPin) {
+        setPinnedMessages(prev => {
+          // Remove if already exists (shouldn't happen, but just in case)
+          const filtered = prev.filter(m => m.id !== messageId);
+          // Add to the beginning (most recent)
+          return [{
+            ...messageToPin,
+            isPinned: true,
+            pinnedBy: currentUser,
+            pinnedAt: new Date()
+          }, ...filtered];
+        });
+      }
     } catch (error) {
       console.error('Error pinning message:', error);
     }
-  }, [currentUser]);
+  }, [currentUser, messages]);
 
   // Unpin a message
   const unpinMessage = useCallback(async (messageId: string) => {
@@ -1440,6 +1456,9 @@ export const useChat = (currentUser: User) => {
         pinnedBy: null,
         pinnedAt: null
       });
+      
+      // Immediately remove from pinnedMessages state
+      setPinnedMessages(prev => prev.filter(m => m.id !== messageId));
     } catch (error) {
       console.error('Error unpinning message:', error);
     }
