@@ -31,12 +31,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
     deleteScheduledMessage,
     toggleScheduledMessage,
     scheduledMessages,
-    // New features
-    draft,
-    draftReplyTo,
-    saveDraft,
-    loadDraft,
-    clearDraft,
     pinMessage,
     unpinMessage,
     pinnedMessages
@@ -136,10 +130,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ currentUser }) => {
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(undefined)}
         onTyping={setTypingStatus}
-        draft={draft}
-        draftReplyTo={draftReplyTo}
-        onSaveDraft={saveDraft}
-        onClearDraft={clearDraft}
       />
     </div>
   );
