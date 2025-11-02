@@ -18,6 +18,7 @@ interface ChatHeaderProps {
   onDeleteScheduledMessage?: (messageId: string) => Promise<void>;
   onToggleScheduledMessage?: (messageId: string, enabled: boolean) => Promise<void>;
   scheduledMessages?: ScheduledMessage[];
+  onMarkAsOffline?: () => Promise<void>;
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ 
@@ -31,15 +32,22 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onScheduleMessage,
   onDeleteScheduledMessage,
   onToggleScheduledMessage,
-  scheduledMessages
+  scheduledMessages,
+  onMarkAsOffline
 }) => {
   const { logout } = useUser();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
   const otherUserStatus = userStatuses[otherUser];
   
-  const handleBack = () => {
-    window.location.reload();
+  const handleBack = async () => {
+    // Use logout function to properly clean up and go back to user selection
+    // First, mark user as offline
+    if (onMarkAsOffline) {
+      await onMarkAsOffline();
+    }
+    // Then logout
+    logout();
   };
 
 
