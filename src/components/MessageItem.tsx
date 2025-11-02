@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Message, User, ReactionType } from '../types';
 import { format } from 'date-fns';
 import { CheckCheck, Check, Reply, CreditCard as Edit2, Trash2, Mic, Play, Pause, MoreVertical, SmilePlus, Plus, Info, History, Pin, PinOff } from 'lucide-react';
-import { MarkdownRenderer } from '../utils/markdown';
 
 interface MessageItemProps {
   message: Message;
@@ -442,7 +441,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </div>
             ) : (
               <div className="mt-1">
-                <MarkdownRenderer content={message.text} className="break-words sm:text-base" />
+                <p className="break-words sm:text-base whitespace-pre-wrap">{message.text}</p>
               </div>
             )}
 
