@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { User, UserStatuses, Message, RecurrenceType, DayOfWeek, ScheduledMessage } from '../types';
-import { ArrowLeft, UserRound, Settings } from 'lucide-react';
+import { ArrowLeft, UserRound, Settings, Bell } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import MessageActionsModal from './MessageActionsModal';
 import BiometricSettingsModal from './BiometricSettingsModal';
+import NotificationModal from './NotificationModal';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ChatHeaderProps {
@@ -37,6 +38,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 }) => {
   const { logout } = useUser();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const otherUser = currentUser === '🐞' ? '🦎' : '🐞';
   const otherUserStatus = userStatuses[otherUser];
   
@@ -86,6 +88,15 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Notification Bell Button */}
+        <button
+          onClick={() => setIsNotificationModalOpen(true)}
+          className="p-2 text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded-full transition-all duration-200"
+          title="Send notification"
+        >
+          <Bell size={20} />
+        </button>
+
         {/* Settings Button */}
         <button
           onClick={() => setIsSettingsOpen(true)}
@@ -94,7 +105,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         >
           <Settings size={20} />
         </button>
-        
+
         <MessageActionsModal 
           messages={messages}
           onDeleteAll={onDeleteAll}
@@ -113,6 +124,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         currentUser={currentUser}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        currentUser={currentUser}
+        otherUser={otherUser}
       />
     </div>
   );
